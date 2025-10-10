@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - PetMat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 24px;
+        }
+        .btn-logout {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-logout:hover {
+            background: white;
+            color: #667eea;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        .profile-pic {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #667eea;
+        }
+        .profile-pic-placeholder {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+        }
+        .profile-info h3 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .profile-info p {
+            color: #666;
+            font-size: 14px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 8px;
+            margin-right: 5px;
+        }
+        .badge-success {
+            background: #efe;
+            color: #3c3;
+        }
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            color: #333;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .alert {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .alert-error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+        .alert-success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+        .hidden {
+            display: none;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+        .file-input-label {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .file-input-label:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>PetMat Dashboard</h1>
+        <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+        <div id="alertBox" class="hidden"></div>
+        
+        <div id="loadingScreen" class="loading">
+            <div class="spinner"></div>
+            <p>Loading your profile...</p>
+        </div>
+
+        <div id="mainContent" class="hidden">
+            <!-- Profile Overview -->
+            <div class="card">
+                <div class="profile-header">
+                    <div id="profilePicContainer"></div>
+                    <div class="profile-info">
+                        <h3 id="userName">Loading...</h3>
+                        <p id="userEmail">Loading...</p>
+                        <div id="userBadges"></div>
+                    </div>
+                </div>
+
+                <div class="file-input-wrapper">
+                    <input type="file" id="profilePicInput" accept="image/*" onchange="uploadProfilePicture()">
+                    <label for="profilePicInput" class="file-input-label">Change Profile Picture</label>
+                </div>
+            </div>
+
+            <!-- Update Name -->
+            <div class="card">
+                <h2>Update Name</h2>
+                <form id="nameForm">
+                    <div class="grid">
+                        <div class="form-group">
+                            <label for="firstName">First Name</label>
+                            <input type="text" id="firstName" placeholder="Enter first name">
+                        </div>
+                        <div class="form-group">
+                            <label for="lastName">Last Name</label>
+                            <input type="text" id="lastName" placeholder="Enter last name">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Name</button>
+                </form>
+            </div>
+
+            <!-- Update Phone -->
+            <div class="card">
+                <h2>Update Phone Number</h2>
+                <form id="phoneForm">
+                    <div class="form-group">
+                        <label for="phoneNumber">Phone Number</label>
+                        <input type="tel" id="phoneNumber" placeholder="Enter phone number">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Phone</button>
+                </form>
+            </div>
+
+            <!-- Update Address -->
+            <div class="card">
+                <h2>Update Address</h2>
+                <form id="addressForm">
+                    <div class="form-group">
+                        <label for="city">City</label>
+                        <input type="text" id="city" placeholder="Enter city" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="government">Government/State</label>
+                        <input type="text" id="government" placeholder="Enter government" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="country">Country</label>
+                        <input type="text" id="country" placeholder="Enter country" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Address</button>
+                </form>
+            </div>
+
+            <!-- Password Management -->
+            <div class="card">
+                <h2>Password Management</h2>
+                <div id="passwordSection"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "http://localhost:5000/api";
+        //const API_BASE = 'https://localhost:7289/api';
+        let userData = null;
+
+        function showAlert(message, type = 'error') {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.className = `alert alert-${type}`;
+            alertBox.textContent = message;
+            alertBox.classList.remove('hidden');
+            window.scrollTo(0, 0);
+            setTimeout(() => alertBox.classList.add('hidden'), 5000);
+        }
+
+        function getAuthHeaders() {
+            const token = localStorage.getItem('accessToken');
+            return {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        async function checkAuth() {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                window.location.href = 'signin.html';
+                return false;
+            }
+            return true;
+        }
+
+        async function loadUserProfile() {
+            try {
+                const response = await fetch(`${API_BASE}/Auth/me`, {
+                    headers: getAuthHeaders()
+                });
+
+                if (response.status === 401) {
+                    await refreshAccessToken();
+                    return loadUserProfile();
+                }
+
+                if (!response.ok) throw new Error('Failed to load profile');
+
+                userData = await response.json();
+                displayUserProfile();
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+            } catch (error) {
+                showAlert('Failed to load profile. Please try again.');
+                setTimeout(() => window.location.href = 'signin.html', 2000);
+            }
+        }
+
+        function displayUserProfile() {
+            const fullName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Anonymous User';
+            document.getElementById('userName').textContent = fullName;
+            document.getElementById('userEmail').textContent = userData.email;
+
+            // Profile picture
+            const picContainer = document.getElementById('profilePicContainer');
+            if (userData.profilePhotoUrl) {
+                picContainer.innerHTML = `<img src="${userData.profilePhotoUrl}" class="profile-pic" alt="Profile">`;
+            } else {
+                const initial = (userData.firstName?.[0] || userData.email?.[0] || 'U').toUpperCase();
+                picContainer.innerHTML = `<div class="profile-pic-placeholder">${initial}</div>`;
+            }
+
+            // Badges
+            const badgesHtml = [];
+            if (userData.emailConfirmed) {
+                badgesHtml.push('<span class="badge badge-success">Email Verified</span>');
+            } else {
+                badgesHtml.push('<span class="badge badge-warning">Email Not Verified</span>');
+            }
+            userData.roles.forEach(role => {
+                badgesHtml.push(`<span class="badge badge-success">${role}</span>`);
+            });
+            document.getElementById('userBadges').innerHTML = badgesHtml.join('');
+
+            // Fill forms
+            document.getElementById('firstName').value = userData.firstName || '';
+            document.getElementById('lastName').value = userData.lastName || '';
+            document.getElementById('phoneNumber').value = userData.phoneNumber || '';
+
+            // Password section
+            const passwordSection = document.getElementById('passwordSection');
+            if (userData.hasPassword) {
+                passwordSection.innerHTML = `
+                    <form id="updatePasswordForm">
+                        <div class="form-group">
+                            <label for="oldPassword">Current Password</label>
+                            <input type="password" id="oldPassword" placeholder="Enter current password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newPassword">New Password</label>
+                            <input type="password" id="newPassword" placeholder="Enter new password (min 6 chars)" required minlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmNewPassword">Confirm New Password</label>
+                            <input type="password" id="confirmNewPassword" placeholder="Confirm new password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Password</button>
+                    </form>
+                `;
+                document.getElementById('updatePasswordForm').addEventListener('submit', updatePassword);
+            } else {
+                passwordSection.innerHTML = `
+                    <p style="color: #666; margin-bottom: 20px;">You don't have a password set. Create one to enable password login.</p>
+                    <form id="createPasswordForm">
+                        <div class="form-group">
+                            <label for="newPasswordCreate">Password</label>
+                            <input type="password" id="newPasswordCreate" placeholder="Enter password (min 6 chars)" required minlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPasswordCreate">Confirm Password</label>
+                            <input type="password" id="confirmPasswordCreate" placeholder="Confirm password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create Password</button>
+                    </form>
+                `;
+                document.getElementById('createPasswordForm').addEventListener('submit', createPassword);
+            }
+        }
+
+        async function refreshAccessToken() {
+            try {
+                const refreshToken = localStorage.getItem('refreshToken');
+                const response = await fetch(`${API_BASE}/Auth/refresh-token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refreshToken })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('accessToken', data.accessToken);
+                    localStorage.setItem('refreshToken', data.refreshToken);
+                    localStorage.setItem('accessTokenExpiresAt', data.accessTokenExpiresAt);
+                    localStorage.setItem('refreshTokenExpiresAt', data.refreshTokenExpiresAt);
+                    return true;
+                }
+            } catch (error) {
+                console.error('Token refresh failed:', error);
+            }
+            window.location.href = 'signin.html';
+            return false;
+        }
+
+        // Update Name
+        document.getElementById('nameForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            btn.textContent = 'Updating...';
+
+            try {
+                const response = await fetch(`${API_BASE}/Auth/profile/name`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        firstName: document.getElementById('firstName').value,
+                        lastName: document.getElementById('lastName').value
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert('Name updated successfully!', 'success');
+                    await loadUserProfile();
+                } else {
+                    showAlert(data.message || 'Failed to update name');
+                }
+            } catch (error) {
+                showAlert('Network error. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Update Name';
+            }
+        });
+
+        // Update Phone
+        document.getElementById('phoneForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            btn.textContent = 'Updating...';
+
+            try {
+                const response = await fetch(`${API_BASE}/Auth/profile/phone`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        phoneNumber: document.getElementById('phoneNumber').value
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert('Phone number updated successfully!', 'success');
+                    await loadUserProfile();
+                } else {
+                    showAlert(data.message || 'Failed to update phone');
+                }
+            } catch (error) {
+                showAlert('Network error. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Update Phone';
+            }
+        });
+
+        // Update Address
+        document.getElementById('addressForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            btn.textContent = 'Updating...';
+
+            try {
+                const response = await fetch(`${API_BASE}/Auth/profile/address`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        city: document.getElementById('city').value,
+                        government: document.getElementById('government').value,
+                        country: document.getElementById('country').value
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert('Address updated successfully!', 'success');
+                    await loadUserProfile();
+                } else {
+                    showAlert(data.message || 'Failed to update address');
+                }
+            } catch (error) {
+                showAlert('Network error. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Update Address';
+            }
+        });
+
+        // Upload Profile Picture
+        async function uploadProfilePicture() {
+            const fileInput = document.getElementById('profilePicInput');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('picture', file);
+
+            try {
+                const token = localStorage.getItem('accessToken');
+                const response = await fetch(`${API_BASE}/Auth/profile/picture`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert('Profile picture updated successfully!', 'success');
+                    await loadUserProfile();
+                } else {
+                    showAlert(data.message || 'Failed to upload picture');
+                }
+            } catch (error) {
+                showAlert('Network error. Please try again.');
+            }
+        }
+
+        // Create Password
+        async function createPassword(e) {
+            e.preventDefault();
+            const password = document.getElementById('newPasswordCreate').value;
+            const confirm = document.getElementById('confirmPasswordCreate').value;
+
+            if (password !== confirm) {
+                showAlert('Passwords do not match');
+                return;
+            }
+
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+
+            try {
+                const response = await fetch(`${API_BASE}/Auth/create-password`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ password, confirmPassword: confirm })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert('Password created successfully!', 'success');
+                    await loadUserProfile();
+                } else {
+                    showAlert(data.message || 'Failed to create password');
+                }
+            } catch (error) {
+                showAlert('Network error. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Create Password';
+            }
+        }
+
+        // Update Password
+        async function updatePassword(e) {
+            e.preventDefault();
+            const oldPassword = document.getElementById('oldPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmNewPassword').value;
+
+            if (newPassword !== confirm) {
+                showAlert('New passwords do not match');
+                return;
+            }
+
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            btn.textContent = 'Updating...';
+
+            try {
+                const response = await fetch(`${API_BASE}/Auth/update-password`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ oldPassword, newPassword, confirmNewPassword: confirm })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert('Password updated successfully!', 'success');
+                    e.target.reset();
+                } else {
+                    showAlert(data.message || 'Failed to update password');
+                }
+            } catch (error) {
+                showAlert('Network error. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Update Password';
+            }
+        }
+
+        // Logout
+        async function logout() {
+            try {
+                await fetch(`${API_BASE}/Auth/logout`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            } finally {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('accessTokenExpiresAt');
+                localStorage.removeItem('refreshTokenExpiresAt');
+                window.location.href = 'signin.html';
+            }
+        }
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', async () => {
+            if (await checkAuth()) {
+                await loadUserProfile();
+            }
+        });
+    </script>
+</body>
+</html>

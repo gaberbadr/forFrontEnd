@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign In - PetMat</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: #fff; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 40px; max-width: 450px; width: 100%;
+    }
+    h1 { color: #333; margin-bottom: 10px; font-size: 28px; }
+    .subtitle { color: #666; margin-bottom: 30px; font-size: 14px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; color: #333; margin-bottom: 8px; font-weight: 500; font-size: 14px; }
+    input {
+      width: 100%; padding: 12px 15px; border: 2px solid #e0e0e0;
+      border-radius: 8px; font-size: 14px; transition: border-color .3s;
+    }
+    input:focus { border-color: #667eea; outline: none; }
+    .btn {
+      width: 100%; padding: 14px; border: none; border-radius: 8px;
+      font-size: 16px; font-weight: 600; cursor: pointer; transition: .3s;
+      margin-bottom: 15px;
+    }
+    .btn-primary { background: #667eea; color: #fff; }
+    .btn-primary:hover { background: #5568d3; transform: translateY(-2px); }
+    .btn-google {
+      background: #fff; border: 2px solid #e0e0e0; display: flex; align-items: center; justify-content: center;
+      gap: 10px; color: #333;
+    }
+    .divider { text-align: center; margin: 25px 0; position: relative; }
+    .divider::before { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: #e0e0e0; }
+    .divider span { background: #fff; padding: 0 15px; position: relative; color: #999; font-size: 14px; }
+    .alert { padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+    .alert-error { background: #fee; color: #c33; border: 1px solid #fcc; }
+    .alert-success { background: #efe; color: #3c3; border: 1px solid #cfc; }
+    .hidden { display: none; }
+    .loading { display: inline-block; width: 16px; height: 16px; border: 3px solid rgba(255,255,255,.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg);} }
+    #otpSection { margin-top: 15px; display: none; }
+    #timerSection {
+      text-align: center; margin-bottom: 15px; padding: 10px;
+      background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px;
+    }
+    #message { margin-top: 15px; padding: 10px; display: none; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Welcome to PetMat</h1>
+    <p class="subtitle">Sign in to manage your pets</p>
+
+    <div id="alertBox" class="hidden"></div>
+
+    <!-- Email/Password Login -->
+    <form id="loginForm">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="Enter your email" required />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Enter your password" required />
+      </div>
+      <button type="submit" class="btn btn-primary"><span id="loginBtnText">Sign In</span></button>
+    </form>
+
+    <div class="divider"><span>OR</span></div>
+
+    <!-- Google Sign In -->
+    <button id="googleBtn" class="btn btn-google">Continue with Google</button>
+
+    <div class="divider"><span>OR</span></div>
+
+    <!-- OTP Login -->
+    <input type="email" id="emailInput" placeholder="Enter your email" style="width:100%;padding:12px;margin-bottom:10px;border:1px solid #ccc;border-radius:8px;">
+    <button id="sendCodeBtn" class="btn btn-primary" style="background:#764ba2;">Send Verification Code</button>
+
+    <div id="otpSection">
+      <div id="timerSection">
+        ⏱️ Code expires in: <span id="timer" style="font-weight:bold;color:#d9534f;">03:00</span>
+      </div>
+      <input type="text" id="otpInput" placeholder="Enter 6-digit OTP" maxlength="6" style="width:100%;padding:12px;margin-bottom:10px;border:1px solid #ccc;border-radius:8px;">
+      <div style="display:flex;gap:10px;">
+        <button id="verifyCodeBtn" class="btn btn-primary" style="flex:1;background:#28a745;">Verify & Sign In</button>
+        <button id="resendCodeBtn" class="btn btn-primary" style="flex:1;background:#6c757d;" disabled>Resend Code</button>
+      </div>
+    </div>
+
+    <div id="message"></div>
+  </div>
+
+  <script>
+    const API_BASE = "http://localhost:5000/api";
+    //const API_BASE = "https://localhost:7289/api";
+    let countdownInterval, timeRemaining = 0;
+
+    // Email/Password
+    document.getElementById("loginForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const btnText = document.getElementById("loginBtnText");
+      btnText.innerHTML = '<span class="loading"></span>';
+      try {
+        const res = await fetch(`${API_BASE}/Auth/login`, {
+          method: "POST", headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({email,password})
+        });
+        const data = await res.json();
+        if(res.ok){
+          localStorage.setItem("accessToken",data.accessToken);
+          localStorage.setItem("refreshToken",data.refreshToken);
+          showMessage("✅ Login successful! Redirecting...","success");
+          setTimeout(()=>location.href="dashboard.html",1000);
+        } else showMessage(data.message||"Login failed","error");
+      } catch { showMessage("Network error","error"); }
+      btnText.textContent="Sign In";
+    });
+
+    // Google
+    document.getElementById("googleBtn").onclick=()=>{
+      location.href=`${API_BASE}/Auth/google-login?returnUrl=${encodeURIComponent(window.location.origin+"/callback.html")}`;
+    };
+
+    // Send OTP
+    document.getElementById("sendCodeBtn").onclick=()=>sendCode();
+    document.getElementById("resendCodeBtn").onclick=()=>sendCode();
+
+    async function sendCode(){
+      const email=document.getElementById("emailInput").value.trim();
+      if(!email) return showMessage("Enter email","error");
+      const sendBtn=document.getElementById("sendCodeBtn");
+      const resendBtn=document.getElementById("resendCodeBtn");
+      sendBtn.textContent="Sending..."; sendBtn.disabled=true; resendBtn.disabled=true;
+      try{
+        const res=await fetch(`${API_BASE}/Auth/send-verification-code`,{
+          method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({email})
+        });
+        const data=await res.json();
+        if(!res.ok) throw new Error(data.message||"Failed to send code");
+        document.getElementById("otpSection").style.display="block";
+        showMessage("Verification code sent!","success");
+        startCountdown();
+      }catch(err){ showMessage(err.message,"error"); sendBtn.textContent="Send Verification Code"; sendBtn.disabled=false;}
+    }
+
+    function startCountdown(){
+      clearInterval(countdownInterval);
+      timeRemaining=180; // 3 minutes
+      updateTimer();
+      const resendBtn=document.getElementById("resendCodeBtn");
+      countdownInterval=setInterval(()=>{
+        timeRemaining--; updateTimer();
+        if(timeRemaining<=0){
+          clearInterval(countdownInterval);
+          document.getElementById("timer").textContent="EXPIRED";
+          resendBtn.disabled=false; resendBtn.textContent="Resend Code";
+          showMessage("Code expired. Request new one.","error");
+        }
+      },1000);
+    }
+    function updateTimer(){
+      const min=String(Math.floor(timeRemaining/60)).padStart(2,"0");
+      const sec=String(timeRemaining%60).padStart(2,"0");
+      document.getElementById("timer").textContent=`${min}:${sec}`;
+      document.getElementById("resendCodeBtn").textContent=`Resend (${min}:${sec})`;
+    }
+
+    // Verify OTP
+    document.getElementById("verifyCodeBtn").onclick=async()=>{
+      const email=document.getElementById("emailInput").value.trim();
+      const code=document.getElementById("otpInput").value.trim();
+      if(code.length!==6) return showMessage("Enter 6-digit code","error");
+      try{
+        const res=await fetch(`${API_BASE}/Auth/verify-code`,{
+          method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({email,code})
+        });
+        const data=await res.json();
+        if(!res.ok) throw new Error(data.message||"Verification failed");
+        clearInterval(countdownInterval);
+        localStorage.setItem("accessToken",data.accessToken);
+        localStorage.setItem("refreshToken",data.refreshToken);
+        showMessage("✅ Verified! Redirecting...","success");
+        setTimeout(()=>location.href="dashboard.html",1500);
+      }catch(err){ showMessage(err.message,"error"); }
+    };
+
+    // Show Message
+    function showMessage(msg,type){
+      const box=document.getElementById("message");
+      box.style.display="block"; box.textContent=msg;
+      if(type==="success"){ box.style.background="#d4edda"; box.style.color="#155724";}
+      else{ box.style.background="#f8d7da"; box.style.color="#721c24";}
+    }
+  </script>
+</body>
+</html>
