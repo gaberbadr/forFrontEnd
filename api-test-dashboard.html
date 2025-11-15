@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PetMat API Testing Dashboard</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .config-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+            font-size: 0.9em;
+        }
+
+        .input-group input {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #ddd;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            font-size: 1em;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .tab:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .endpoint-section {
+            margin-bottom: 30px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .endpoint-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .method-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 700;
+        }
+
+        .method-get { background: #28a745; }
+        .method-post { background: #007bff; }
+        .method-put { background: #ffc107; color: #333; }
+        .method-delete { background: #dc3545; }
+
+        .endpoint-body {
+            padding: 20px;
+            background: #fafafa;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95em;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            font-family: monospace;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .response-box {
+            margin-top: 15px;
+            padding: 15px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 400px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .card-element-container {
+            border: 2px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            background: white;
+            margin-bottom: 15px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🐾 PetMat API Testing Dashboard</h1>
+            <p>Complete API Testing Interface for All Endpoints</p>
+        </div>
+
+        <!-- Configuration Section -->
+        <div class="config-section">
+            <h2 style="margin-bottom: 20px; color: #333;">⚙️ Configuration</h2>
+            <div class="config-grid">
+                <div class="input-group">
+                    <label>API Base URL</label>
+                    <input type="text" id="baseUrl" value="https://localhost:7289" placeholder="https://localhost:7289">
+                </div>
+                <div class="input-group">
+                    <label>Access Token (Bearer)</label>
+                    <input type="text" id="accessToken" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6...">
+                </div>
+                <div class="input-group">
+                    <label>Stripe Publishable Key</label>
+                    <input type="text" id="stripeKey" placeholder="pk_test_...">
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="openTab('auth')">🔐 Auth</button>
+            <button class="tab" onclick="openTab('products')">🛍️ Products</button>
+            <button class="tab" onclick="openTab('cart')">🛒 Cart</button>
+            <button class="tab" onclick="openTab('orders')">📦 Orders</button>
+            <button class="tab" onclick="openTab('payment')">💳 Payment</button>
+            <button class="tab" onclick="openTab('animals')">🦁 Animals</button>
+            <button class="tab" onclick="openTab('admin')">👨‍💼 Admin</button>
+        </div>
+
+        <!-- Tab Contents -->
+        
+        <!-- AUTH TAB -->
+        <div id="auth" class="tab-content active">
+            <h2>🔐 Authentication</h2>
+            
+            <!-- Register -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Register New User</span>
+                    <span class="method-badge method-post">POST</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>First Name</label>
+                            <input type="text" id="regFirstName" value="John">
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name</label>
+                            <input type="text" id="regLastName" value="Doe">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="regEmail" value="test@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="text" id="regPhone" value="01234567890">
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="regPassword" value="Password123">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm Password</label>
+                            <input type="password" id="regConfirmPassword" value="Password123">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="register()">Register</button>
+                    <div id="registerResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Login -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Login</span>
+                    <span class="method-badge method-post">POST</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="loginEmail" value="test@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="loginPassword" value="Password123">
+                    </div>
+                    <button class="btn btn-primary" onclick="login()">Login</button>
+                    <button class="btn btn-secondary" onclick="copyTokenToConfig()">Copy Token to Config</button>
+                    <div id="loginResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Get Current User -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Get Current User</span>
+                    <span class="method-badge method-get">GET</span>
+                </div>
+                <div class="endpoint-body">
+                    <button class="btn btn-primary" onclick="getCurrentUser()">Get User Info</button>
+                    <div id="currentUserResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRODUCTS TAB -->
+        <div id="products" class="tab-content">
+            <h2>🛍️ Products</h2>
+
+            <!-- Get All Products -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Get All Products</span>
+                    <span class="method-badge method-get">GET</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Page Index</label>
+                            <input type="number" id="productsPageIndex" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Page Size</label>
+                            <input type="number" id="productsPageSize" value="10">
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Min Price</label>
+                            <input type="number" id="productsMinPrice" placeholder="Optional">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Price</label>
+                            <input type="number" id="productsMaxPrice" placeholder="Optional">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Search</label>
+                        <input type="text" id="productsSearch" placeholder="Search by name or description">
+                    </div>
+                    <button class="btn btn-primary" onclick="getAllProducts()">Get Products</button>
+                    <div id="productsResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Get Product by ID -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Get Product by ID</span>
+                    <span class="method-badge method-get">GET</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="form-group">
+                        <label>Product ID</label>
+                        <input type="number" id="productId" value="1">
+                    </div>
+                    <button class="btn btn-primary" onclick="getProductById()">Get Product</button>
+                    <div id="productByIdResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Get Brands -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Get All Brands</span>
+                    <span class="method-badge method-get">GET</span>
+                </div>
+                <div class="endpoint-body">
+                    <button class="btn btn-primary" onclick="getAllBrands()">Get Brands</button>
+                    <div id="brandsResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Get Types -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Get All Product Types</span>
+                    <span class="method-badge method-get">GET</span>
+                </div>
+                <div class="endpoint-body">
+                    <button class="btn btn-primary" onclick="getAllTypes()">Get Types</button>
+                    <div id="typesResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CART TAB -->
+        <div id="cart" class="tab-content">
+            <h2>🛒 Shopping Cart</h2>
+
+            <!-- Get Cart -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Get My Cart</span>
+                    <span class="method-badge method-get">GET</span>
+                </div>
+                <div class="endpoint-body">
+                    <button class="btn btn-primary" onclick="getCart()">Get Cart</button>
+                    <div id="cartResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Add to Cart -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Add to Cart</span>
+                    <span class="method-badge method-post">POST</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Product ID</label>
+                            <input type="number" id="cartProductId" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Quantity</label>
+                            <input type="number" id="cartQuantity" value="2">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="addToCart()">Add to Cart</button>
+                    <div id="addToCartResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Update Cart Item -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Update Cart Item</span>
+                    <span class="method-badge method-put">PUT</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Cart Item ID</label>
+                            <input type="number" id="updateCartItemId" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>New Quantity</label>
+                            <input type="number" id="updateCartQuantity" value="3">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="updateCartItem()">Update Item</button>
+                    <div id="updateCartResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Apply Coupon -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Apply Coupon</span>
+                    <span class="method-badge method-post">POST</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="form-group">
+                        <label>Coupon Code</label>
+                        <input type="text" id="couponCode" value="SAVE10">
+                    </div>
+                    <button class="btn btn-primary" onclick="applyCoupon()">Apply Coupon</button>
+                    <button class="btn btn-secondary" onclick="removeCoupon()">Remove Coupon</button>
+                    <div id="couponResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Remove Cart Item -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Remove Cart Item</span>
+                    <span class="method-badge method-delete">DELETE</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="form-group">
+                        <label>Cart Item ID</label>
+                        <input type="number" id="removeCartItemId" value="1">
+                    </div>
+                    <button class="btn btn-primary" onclick="removeCartItem()">Remove Item</button>
+                    <button class="btn btn-secondary" onclick="clearCart()">Clear Entire Cart</button>
+                    <div id="removeCartResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ORDERS TAB -->
+        <div id="orders" class="tab-content">
+            <h2>📦 Orders</h2>
+
+            <!-- Payment Method Selection -->
+            <div class="form-group">
+                <label>Payment Method</label>
+                <select id="paymentMethod">
+                    <option value="1">Online Payment (Stripe)</option>
+                    <option value="2">Cash on Delivery</option>
+                </select>
+            </div>
+            <!-- Get Delivery Methods -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Get Delivery Methods</span>
+                    <span class="method-badge method-get">GET</span>
+                </div>
+                <div class="endpoint-body">
+                    <button class="btn btn-primary" onclick="getDeliveryMethods()">Get Methods</button>
+                    <div id="deliveryMethodsResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Create Order -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Create Order</span>
+                    <span class="method-badge method-post">POST</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="info-box">
+                        ℹ️ Make sure to complete payment first before creating order!
+                    </div>
+                    <div class="form-group">
+                        <label>Delivery Method ID</label>
+                        <input type="number" id="orderDeliveryMethodId" value="1">
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>First Name</label>
+                            <input type="text" id="orderFName" value="John">
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name</label>
+                            <input type="text" id="orderLName" value="Doe">
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>City</label>
+                            <input type="text" id="orderCity" value="Cairo">
+                        </div>
+                        <div class="form-group">
+                            <label>Country</label>
+                            <input type="text" id="orderCountry" value="Egypt">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Street Address</label>
+                        <input type="text" id="orderStreet" value="123 Main Street">
+                    </div>
+                    <button class="btn btn-primary" onclick="createOrder()">Create Order</button>
+                    <div id="createOrderResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Get My Orders -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Get My Orders</span>
+                    <span class="method-badge method-get">GET</span>
+                </div>
+                <div class="endpoint-body">
+                    <button class="btn btn-primary" onclick="getMyOrders()">Get My Orders</button>
+                    <div id="myOrdersResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Get Order by ID -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Get Order by ID</span>
+                    <span class="method-badge method-get">GET</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="form-group">
+                        <label>Order ID</label>
+                        <input type="number" id="orderId" value="1">
+                    </div>
+                    <button class="btn btn-primary" onclick="getOrderById()">Get Order</button>
+                    <div id="orderByIdResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAYMENT TAB -->
+        <div id="payment" class="tab-content">
+            <h2>💳 Payment</h2>
+
+            <!-- Create Payment Intent -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Create Payment Intent</span>
+                    <span class="method-badge method-post">POST</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="info-box">
+                        ℹ️ This creates a payment intent for your current cart. Make sure you have items in cart first!
+                    </div>
+                    <button class="btn btn-primary" onclick="createPaymentIntent()">Create Payment Intent</button>
+                    <div id="paymentIntentResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Complete Payment -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Complete Payment with Stripe</span>
+                    <span class="method-badge method-post">POST</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="info-box">
+                        ℹ️ <strong>Test Cards:</strong><br>
+                        Success: 4242 4242 4242 4242<br>
+                        Decline: 4000 0000 0000 0002<br>
+                        Use any future expiry (e.g., 12/25) and any CVC (e.g., 123)
+                    </div>
+                    <div class="form-group">
+                        <label>Client Secret (from payment intent above)</label>
+                        <input type="text" id="clientSecret" placeholder="pi_xxx_secret_yyy">
+                    </div>
+                    <div class="form-group">
+                        <label>Card Details</label>
+                        <div id="card-element" class="card-element-container"></div>
+                    </div>
+                    <button class="btn btn-primary" onclick="completePayment()">Complete Payment</button>
+                    <div id="paymentResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANIMALS TAB -->
+        <div id="animals" class="tab-content">
+            <h2>🦁 Animals</h2>
+
+            <!-- Get All Listings -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Get Animal Listings</span>
+                    <span class="method-badge method-get">GET</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Page Index</label>
+                            <input type="number" id="animalsPageIndex" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Page Size</label>
+                            <input type="number" id="animalsPageSize" value="10">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="getAnimalListings()">Get Listings</button>
+                    <div id="animalListingsResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Get Species -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Get All Species</span>
+                    <span class="method-badge method-get">GET</span>
+                </div>
+                <div class="endpoint-body">
+                    <button class="btn btn-primary" onclick="getSpecies()">Get Species</button>
+                    <div id="speciesResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Get My Animals -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Get My Animals</span>
+                    <span class="method-badge method-get">GET</span>
+                </div>
+                <div class="endpoint-body">
+                    <button class="btn btn-primary" onclick="getMyAnimals()">Get My Animals</button>
+                    <div id="myAnimalsResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN TAB -->
+        <div id="admin" class="tab-content">
+            <h2>👨‍💼 Admin Functions</h2>
+
+            <div class="info-box">
+                ℹ️ These endpoints require Admin role. Make sure you're logged in as admin!
+            </div>
+
+            <!-- Get All Orders (Admin) -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Get All Orders (Admin)</span>
+                    <span class="method-badge method-get">GET</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Page Index</label>
+                            <input type="number" id="adminOrdersPageIndex" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Page Size</label>
+                            <input type="number" id="adminOrdersPageSize" value="10">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Status Filter (optional)</label>
+                        <select id="adminOrdersStatus">
+                            <option value="">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Processing">Processing</option>
+                            <option value="Shipped">Shipped</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="getAdminOrders()">Get Orders</button>
+                    <div id="adminOrdersResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Update Order Status (Admin) -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Update Order Status (Admin)</span>
+                    <span class="method-badge method-put">PUT</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Order ID</label>
+                            <input type="number" id="adminUpdateOrderId" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>New Status</label>
+                            <select id="adminNewOrderStatus">
+                                <option value="Pending">Pending</option>
+                                <option value="Processing">Processing</option>
+                                <option value="Shipped">Shipped</option>
+                                <option value="Delivered">Delivered</option>
+                                <option value="Cancelled">Cancelled</option>
+                                <option value="Refunded">Refunded</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="updateOrderStatus()">Update Status</button>
+                    <div id="updateOrderStatusResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Get All Coupons (Admin) -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Get All Coupons (Admin)</span>
+                    <span class="method-badge method-get">GET</span>
+                </div>
+                <div class="endpoint-body">
+                    <button class="btn btn-primary" onclick="getAllCoupons()">Get Coupons</button>
+                    <div id="allCouponsResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Create Coupon (Admin) -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Create Coupon (Admin)</span>
+                    <span class="method-badge method-post">POST</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Coupon Name</label>
+                            <input type="text" id="couponName" value="Summer Sale">
+                        </div>
+                        <div class="form-group">
+                            <label>Coupon Code</label>
+                            <input type="text" id="couponCodeAdmin" value="SAVE10">
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Rate</label>
+                            <input type="number" id="couponRate" value="10">
+                        </div>
+                        <div class="form-group">
+                            <label>Type</label>
+                            <select id="couponIsPercentage">
+                                <option value="true">Percentage (%)</option>
+                                <option value="false">Fixed Amount ($)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Min Order Amount</label>
+                            <input type="number" id="couponMinAmount" value="50">
+                        </div>
+                        <div class="form-group">
+                            <label>Expires At (optional)</label>
+                            <input type="date" id="couponExpiresAt">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="createCoupon()">Create Coupon</button>
+                    <div id="createCouponResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Add Species (Admin) -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Add Species (Admin)</span>
+                    <span class="method-badge method-post">POST</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="form-group">
+                        <label>Species Name</label>
+                        <input type="text" id="speciesName" value="Dog">
+                    </div>
+                    <button class="btn btn-primary" onclick="addSpecies()">Add Species</button>
+                    <div id="addSpeciesResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stripe = null;
+        let cardElement = null;
+        let lastLoginResponse = null;
+
+        // Initialize Stripe
+        function initializeStripe() {
+            const stripeKey = document.getElementById('stripeKey').value;
+            if (stripeKey && !stripe) {
+                stripe = Stripe(stripeKey);
+                const elements = stripe.elements();
+                cardElement = elements.create('card');
+                cardElement.mount('#card-element');
+            }
+        }
+
+        // Tab functionality
+        function openTab(tabName) {
+            const tabContents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove('active');
+            }
+            
+            const tabs = document.getElementsByClassName('tab');
+            for (let i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            // Initialize Stripe when payment tab is opened
+            if (tabName === 'payment') {
+                initializeStripe();
+            }
+        }
+
+        // Helper function to get headers
+        function getHeaders(includeAuth = true) {
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            if (includeAuth) {
+                const token = document.getElementById('accessToken').value;
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+            }
+            
+            return headers;
+        }
+
+        // Helper function to get base URL
+        function getBaseUrl() {
+            return document.getElementById('baseUrl').value;
+        }
+
+        // Helper function to display response
+        function displayResponse(elementId, response, status) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.textContent = JSON.stringify(response, null, 2);
+            
+            if (status) {
+                const statusClass = status >= 200 && status < 300 ? 'status-success' : 'status-error';
+                element.innerHTML = `<span class="status-indicator ${statusClass}">Status: ${status}</span>\n\n` + element.textContent;
+            }
+        }
+
+        // AUTH FUNCTIONS
+
+        async function register() {
+            const data = {
+                firstName: document.getElementById('regFirstName').value,
+                lastName: document.getElementById('regLastName').value,
+                email: document.getElementById('regEmail').value,
+                phoneNumber: document.getElementById('regPhone').value,
+                password: document.getElementById('regPassword').value,
+                confirmPassword: document.getElementById('regConfirmPassword').value
+            };
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/auth/register`, {
+                    method: 'POST',
+                    headers: getHeaders(false),
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                displayResponse('registerResponse', result, response.status);
+            } catch (error) {
+                displayResponse('registerResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function login() {
+            const data = {
+                email: document.getElementById('loginEmail').value,
+                password: document.getElementById('loginPassword').value
+            };
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/auth/login`, {
+                    method: 'POST',
+                    headers: getHeaders(false),
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                lastLoginResponse = result;
+                displayResponse('loginResponse', result, response.status);
+                
+                if (result.token) {
+                    alert('✅ Login successful! Click "Copy Token to Config" to use this token for other requests.');
+                }
+            } catch (error) {
+                displayResponse('loginResponse', { error: error.message }, 0);
+            }
+        }
+
+        function copyTokenToConfig() {
+            if (lastLoginResponse && lastLoginResponse.token) {
+                document.getElementById('accessToken').value = lastLoginResponse.token;
+                alert('✅ Token copied to configuration! You can now use authenticated endpoints.');
+            } else {
+                alert('❌ Please login first to get a token.');
+            }
+        }
+
+        async function getCurrentUser() {
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/auth/current-user`, {
+                    method: 'GET',
+                    headers: getHeaders(true)
+                });
+                const result = await response.json();
+                displayResponse('currentUserResponse', result, response.status);
+            } catch (error) {
+                displayResponse('currentUserResponse', { error: error.message }, 0);
+            }
+        }
+
+        // PRODUCT FUNCTIONS
+
+        async function getAllProducts() {
+            const pageIndex = document.getElementById('productsPageIndex').value;
+            const pageSize = document.getElementById('productsPageSize').value;
+            const minPrice = document.getElementById('productsMinPrice').value;
+            const maxPrice = document.getElementById('productsMaxPrice').value;
+            const search = document.getElementById('productsSearch').value;
+
+            let url = `${getBaseUrl()}/api/product?pageIndex=${pageIndex}&pageSize=${pageSize}`;
+            if (minPrice) url += `&minPrice=${minPrice}`;
+            if (maxPrice) url += `&maxPrice=${maxPrice}`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: getHeaders(false)
+                });
+                const result = await response.json();
+                displayResponse('productsResponse', result, response.status);
+            } catch (error) {
+                displayResponse('productsResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function getProductById() {
+            const id = document.getElementById('productId').value;
+            
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/product/${id}`, {
+                    method: 'GET',
+                    headers: getHeaders(false)
+                });
+                const result = await response.json();
+                displayResponse('productByIdResponse', result, response.status);
+            } catch (error) {
+                displayResponse('productByIdResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function getAllBrands() {
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/product/brands`, {
+                    method: 'GET',
+                    headers: getHeaders(false)
+                });
+                const result = await response.json();
+                displayResponse('brandsResponse', result, response.status);
+            } catch (error) {
+                displayResponse('brandsResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function getAllTypes() {
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/product/types`, {
+                    method: 'GET',
+                    headers: getHeaders(false)
+                });
+                const result = await response.json();
+                displayResponse('typesResponse', result, response.status);
+            } catch (error) {
+                displayResponse('typesResponse', { error: error.message }, 0);
+            }
+        }
+
+        // CART FUNCTIONS
+
+        async function getCart() {
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/cart`, {
+                    method: 'GET',
+                    headers: getHeaders(true)
+                });
+                const result = await response.json();
+                displayResponse('cartResponse', result, response.status);
+            } catch (error) {
+                displayResponse('cartResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function addToCart() {
+            const data = {
+                productId: parseInt(document.getElementById('cartProductId').value),
+                quantity: parseInt(document.getElementById('cartQuantity').value)
+            };
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/cart/add`, {
+                    method: 'POST',
+                    headers: getHeaders(true),
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                displayResponse('addToCartResponse', result, response.status);
+            } catch (error) {
+                displayResponse('addToCartResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function updateCartItem() {
+            const itemId = document.getElementById('updateCartItemId').value;
+            const data = {
+                quantity: parseInt(document.getElementById('updateCartQuantity').value)
+            };
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/cart/item/${itemId}`, {
+                    method: 'PUT',
+                    headers: getHeaders(true),
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                displayResponse('updateCartResponse', result, response.status);
+            } catch (error) {
+                displayResponse('updateCartResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function applyCoupon() {
+            const data = {
+                couponCode: document.getElementById('couponCode').value
+            };
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/cart/coupon`, {
+                    method: 'POST',
+                    headers: getHeaders(true),
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                displayResponse('couponResponse', result, response.status);
+            } catch (error) {
+                displayResponse('couponResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function removeCoupon() {
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/cart/coupon`, {
+                    method: 'DELETE',
+                    headers: getHeaders(true)
+                });
+                const result = await response.json();
+                displayResponse('couponResponse', result, response.status);
+            } catch (error) {
+                displayResponse('couponResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function removeCartItem() {
+            const itemId = document.getElementById('removeCartItemId').value;
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/cart/item/${itemId}`, {
+                    method: 'DELETE',
+                    headers: getHeaders(true)
+                });
+                const result = await response.json();
+                displayResponse('removeCartResponse', result, response.status);
+            } catch (error) {
+                displayResponse('removeCartResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function clearCart() {
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/cart/clear`, {
+                    method: 'DELETE',
+                    headers: getHeaders(true)
+                });
+                const result = await response.json();
+                displayResponse('removeCartResponse', result, response.status);
+            } catch (error) {
+                displayResponse('removeCartResponse', { error: error.message }, 0);
+            }
+        }
+
+        // ORDER FUNCTIONS
+
+        async function getDeliveryMethods() {
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/order/delivery-methods`, {
+                    method: 'GET',
+                    headers: getHeaders(false)
+                });
+                const result = await response.json();
+                displayResponse('deliveryMethodsResponse', result, response.status);
+            } catch (error) {
+                displayResponse('deliveryMethodsResponse', { error: error.message }, 0);
+            }
+        }
+
+async function createOrder() {
+    const data = {
+        deliveryMethodId: parseInt(document.getElementById('orderDeliveryMethodId').value),
+        paymentMethod: parseInt(document.getElementById('paymentMethod').value), // NEW!
+        shippingAddress: {
+            fName: document.getElementById('orderFName').value,
+            lName: document.getElementById('orderLName').value,
+            city: document.getElementById('orderCity').value,
+            street: document.getElementById('orderStreet').value,
+            country: document.getElementById('orderCountry').value
+        }
+    };
+
+    try {
+        const response = await fetch(`${getBaseUrl()}/api/order`, {
+            method: 'POST',
+            headers: getHeaders(true),
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        displayResponse('createOrderResponse', result, response.status);
+        
+        if (response.ok) {
+            alert('✅ Order created successfully! Your cart has been cleared.');
+        }
+    } catch (error) {
+        displayResponse('createOrderResponse', { error: error.message }, 0);
+    }
+}
+        async function getMyOrders() {
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/order/my-orders`, {
+                    method: 'GET',
+                    headers: getHeaders(true)
+                });
+                const result = await response.json();
+                displayResponse('myOrdersResponse', result, response.status);
+            } catch (error) {
+                displayResponse('myOrdersResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function getOrderById() {
+            const id = document.getElementById('orderId').value;
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/order/${id}`, {
+                    method: 'GET',
+                    headers: getHeaders(true)
+                });
+                const result = await response.json();
+                displayResponse('orderByIdResponse', result, response.status);
+            } catch (error) {
+                displayResponse('orderByIdResponse', { error: error.message }, 0);
+            }
+        }
+
+        // PAYMENT FUNCTIONS
+
+        async function createPaymentIntent() {
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/order/payment-intent`, {
+                    method: 'POST',
+                    headers: getHeaders(true)
+                });
+                const result = await response.json();
+                displayResponse('paymentIntentResponse', result, response.status);
+                
+                if (result.clientSecret) {
+                    document.getElementById('clientSecret').value = result.clientSecret;
+                    alert('✅ Payment intent created! Client secret has been auto-filled below. You can now complete the payment.');
+                }
+            } catch (error) {
+                displayResponse('paymentIntentResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function completePayment() {
+            const clientSecret = document.getElementById('clientSecret').value;
+            
+            if (!clientSecret) {
+                alert('❌ Please create a payment intent first!');
+                return;
+            }
+
+            if (!stripe || !cardElement) {
+                alert('❌ Please enter your Stripe Publishable Key in the configuration section first!');
+                return;
+            }
+
+            try {
+                displayResponse('paymentResponse', { status: 'Processing payment...' }, null);
+                
+                const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+                    payment_method: {
+                        card: cardElement,
+                        billing_details: {
+                            name: 'Test User'
+                        }
+                    }
+                });
+
+                if (error) {
+                    displayResponse('paymentResponse', { 
+                        error: error.message,
+                        type: error.type,
+                        code: error.code
+                    }, 400);
+                } else {
+                    displayResponse('paymentResponse', {
+                        success: true,
+                        message: '✅ Payment successful!',
+                        paymentIntent: {
+                            id: paymentIntent.id,
+                            status: paymentIntent.status,
+                            amount: paymentIntent.amount / 100,
+                            currency: paymentIntent.currency
+                        }
+                    }, 200);
+                    alert('✅ Payment successful! You can now create your order.');
+                }
+            } catch (error) {
+                displayResponse('paymentResponse', { error: error.message }, 0);
+            }
+        }
+
+        // ANIMAL FUNCTIONS
+
+        async function getAnimalListings() {
+            const pageIndex = document.getElementById('animalsPageIndex').value;
+            const pageSize = document.getElementById('animalsPageSize').value;
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/animal/listings?pageIndex=${pageIndex}&pageSize=${pageSize}`, {
+                    method: 'GET',
+                    headers: getHeaders(false)
+                });
+                const result = await response.json();
+                displayResponse('animalListingsResponse', result, response.status);
+            } catch (error) {
+                displayResponse('animalListingsResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function getSpecies() {
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/animal/species`, {
+                    method: 'GET',
+                    headers: getHeaders(false)
+                });
+                const result = await response.json();
+                displayResponse('speciesResponse', result, response.status);
+            } catch (error) {
+                displayResponse('speciesResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function getMyAnimals() {
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/animal/my-animals`, {
+                    method: 'GET',
+                    headers: getHeaders(true)
+                });
+                const result = await response.json();
+                displayResponse('myAnimalsResponse', result, response.status);
+            } catch (error) {
+                displayResponse('myAnimalsResponse', { error: error.message }, 0);
+            }
+        }
+
+        // ADMIN FUNCTIONS
+
+        async function getAdminOrders() {
+            const pageIndex = document.getElementById('adminOrdersPageIndex').value;
+            const pageSize = document.getElementById('adminOrdersPageSize').value;
+            const status = document.getElementById('adminOrdersStatus').value;
+
+            let url = `${getBaseUrl()}/api/adminorder?pageIndex=${pageIndex}&pageSize=${pageSize}`;
+            if (status) url += `&status=${status}`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: getHeaders(true)
+                });
+                const result = await response.json();
+                displayResponse('adminOrdersResponse', result, response.status);
+            } catch (error) {
+                displayResponse('adminOrdersResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function updateOrderStatus() {
+            const orderId = document.getElementById('adminUpdateOrderId').value;
+            const status = document.getElementById('adminNewOrderStatus').value;
+
+            const data = { status: status };
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/adminorder/${orderId}/status`, {
+                    method: 'PUT',
+                    headers: getHeaders(true),
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                displayResponse('updateOrderStatusResponse', result, response.status);
+            } catch (error) {
+                displayResponse('updateOrderStatusResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function getAllCoupons() {
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/admincoupon`, {
+                    method: 'GET',
+                    headers: getHeaders(true)
+                });
+                const result = await response.json();
+                displayResponse('allCouponsResponse', result, response.status);
+            } catch (error) {
+                displayResponse('allCouponsResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function createCoupon() {
+            const data = {
+                name: document.getElementById('couponName').value,
+                code: document.getElementById('couponCodeAdmin').value,
+                rate: parseFloat(document.getElementById('couponRate').value),
+                isPercentage: document.getElementById('couponIsPercentage').value === 'true',
+                minOrderAmount: parseFloat(document.getElementById('couponMinAmount').value),
+                expiresAt: document.getElementById('couponExpiresAt').value || null
+            };
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/admincoupon`, {
+                    method: 'POST',
+                    headers: getHeaders(true),
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                displayResponse('createCouponResponse', result, response.status);
+            } catch (error) {
+                displayResponse('createCouponResponse', { error: error.message }, 0);
+            }
+        }
+
+        async function addSpecies() {
+            const data = {
+                name: document.getElementById('speciesName').value
+            };
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/admin/species`, {
+                    method: 'POST',
+                    headers: getHeaders(true),
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                displayResponse('addSpeciesResponse', result, response.status);
+            } catch (error) {
+                displayResponse('addSpeciesResponse', { error: error.message }, 0);
+            }
+        }
+    </script>
+</body>
+</html>
