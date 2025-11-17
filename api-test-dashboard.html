@@ -244,6 +244,22 @@
             border-radius: 4px;
         }
 
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
         .card-element-container {
             border: 2px solid #ddd;
             padding: 15px;
@@ -256,6 +272,27 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
+        }
+
+        .workflow-steps {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .workflow-steps h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .workflow-steps ol {
+            margin-left: 20px;
+        }
+
+        .workflow-steps li {
+            margin-bottom: 10px;
+            line-height: 1.6;
         }
 
         @media (max-width: 768px) {
@@ -284,7 +321,7 @@
         <!-- Header -->
         <div class="header">
             <h1>🐾 PetMat API Testing Dashboard</h1>
-            <p>Complete API Testing Interface for All Endpoints</p>
+            <p>Complete API Testing Interface - Updated with New Payment Flow</p>
         </div>
 
         <!-- Configuration Section -->
@@ -308,19 +345,78 @@
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab active" onclick="openTab('auth')">🔐 Auth</button>
+            <button class="tab active" onclick="openTab('workflow')">🔄 Workflow Guide</button>
+            <button class="tab" onclick="openTab('auth')">🔐 Auth</button>
             <button class="tab" onclick="openTab('products')">🛍️ Products</button>
             <button class="tab" onclick="openTab('cart')">🛒 Cart</button>
-            <button class="tab" onclick="openTab('orders')">📦 Orders</button>
             <button class="tab" onclick="openTab('payment')">💳 Payment</button>
+            <button class="tab" onclick="openTab('orders')">📦 Orders</button>
             <button class="tab" onclick="openTab('animals')">🦁 Animals</button>
             <button class="tab" onclick="openTab('admin')">👨‍💼 Admin</button>
         </div>
 
         <!-- Tab Contents -->
         
+        <!-- WORKFLOW GUIDE TAB -->
+        <div id="workflow" class="tab-content active">
+            <h2>🔄 Complete Workflow Guide</h2>
+            
+            <div class="success-box">
+                <strong>✅ NEW WORKFLOW:</strong> Order is now created BEFORE payment completion!
+            </div>
+
+            <div class="workflow-steps">
+                <h3>💳 Online Payment Workflow (Stripe)</h3>
+                <ol>
+                    <li><strong>Login/Register:</strong> Get your authentication token</li>
+                    <li><strong>Browse Products:</strong> View available products</li>
+                    <li><strong>Add to Cart:</strong> Add products to your shopping cart</li>
+                    <li><strong>Apply Coupon (Optional):</strong> Add discount code if available</li>
+                    <li><strong>Create Payment Intent:</strong> Generate Stripe payment session (stores PaymentIntentId in cart)</li>
+                    <li><strong>Create Order:</strong> Create order with PaymentMethod=1 (Online) - Order status will be <code>PendingPayment</code></li>
+                    <li><strong>Complete Payment:</strong> Pay using Stripe with card details</li>
+                    <li><strong>Webhook Updates Order:</strong> Stripe webhook automatically updates order status:
+                        <ul>
+                            <li>✅ Payment Success → Status: <code>Processing</code></li>
+                            <li>❌ Payment Failed → Status: <code>Cancelled</code></li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="workflow-steps">
+                <h3>💵 Cash on Delivery Workflow</h3>
+                <ol>
+                    <li><strong>Login/Register:</strong> Get your authentication token</li>
+                    <li><strong>Browse Products:</strong> View available products</li>
+                    <li><strong>Add to Cart:</strong> Add products to your shopping cart</li>
+                    <li><strong>Apply Coupon (Optional):</strong> Add discount code if available</li>
+                    <li><strong>Create Order:</strong> Create order with PaymentMethod=2 (CashOnDelivery) - Order status will be <code>Pending</code></li>
+                    <li><strong>Done!</strong> No payment needed, order proceeds with COD</li>
+                </ol>
+            </div>
+
+            <div class="info-box">
+                <strong>ℹ️ Key Changes:</strong><br>
+                • Order is created IMMEDIATELY when user clicks "Create Order"<br>
+                • Online orders start with status: <code>PendingPayment</code><br>
+                • COD orders start with status: <code>Pending</code><br>
+                • Payment happens AFTER order creation for online payments<br>
+                • Webhook updates existing order status based on payment result<br>
+                • Stock is deducted immediately when order is created<br>
+            </div>
+
+            <div class="warning-box">
+                <strong>⚠️ Important Notes:</strong><br>
+                • For online payment, you MUST create payment intent before creating order<br>
+                • Cart is cleared immediately after order creation<br>
+                • If payment fails, order status becomes <code>Cancelled</code> (stock already deducted)<br>
+                • Test cards: Success: 4242 4242 4242 4242 | Fail: 4000 0000 0000 0002<br>
+            </div>
+        </div>
+
         <!-- AUTH TAB -->
-        <div id="auth" class="tab-content active">
+        <div id="auth" class="tab-content">
             <h2>🔐 Authentication</h2>
             
             <!-- Register -->
@@ -573,18 +669,80 @@
             </div>
         </div>
 
+        <!-- PAYMENT TAB -->
+        <div id="payment" class="tab-content">
+            <h2>💳 Payment (Only for Online Orders)</h2>
+
+            <div class="warning-box">
+                <strong>⚠️ NEW FLOW:</strong> You must create the payment intent BEFORE creating the order, but complete payment AFTER creating the order!
+            </div>
+
+            <!-- Create Payment Intent -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Step 1: Create Payment Intent</span>
+                    <span class="method-badge method-post">POST</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="info-box">
+                        ℹ️ This creates a payment intent for your current cart. The PaymentIntentId will be stored in your cart. Do this BEFORE creating the order!
+                    </div>
+                    <button class="btn btn-primary" onclick="createPaymentIntent()">Create Payment Intent</button>
+                    <div id="paymentIntentResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Create Order Note -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Step 2: Create Order (Go to Orders Tab)</span>
+                    <span class="method-badge method-post">POST</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="success-box">
+                        ✅ After creating payment intent, go to the <strong>Orders</strong> tab and create your order with PaymentMethod=1 (Online). The order will be created with status <code>PendingPayment</code>.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Complete Payment -->
+            <div class="endpoint-section">
+                <div class="endpoint-header">
+                    <span>Step 3: Complete Payment with Stripe</span>
+                    <span class="method-badge method-post">POST</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="info-box">
+                        ℹ️ <strong>Test Cards:</strong><br>
+                        Success: 4242 4242 4242 4242<br>
+                        Decline: 4000 0000 0000 0002<br>
+                        Use any future expiry (e.g., 12/25) and any CVC (e.g., 123)
+                    </div>
+                    <div class="form-group">
+                        <label>Client Secret (from payment intent above)</label>
+                        <input type="text" id="clientSecret" placeholder="pi_xxx_secret_yyy">
+                    </div>
+                    <div class="form-group">
+                        <label>Card Details</label>
+                        <div id="card-element" class="card-element-container"></div>
+                    </div>
+                    <button class="btn btn-primary" onclick="completePayment()">Complete Payment</button>
+                    <div id="paymentResponse" class="response-box" style="display:none;"></div>
+                </div>
+            </div>
+
+            <div class="success-box">
+                <strong>✅ What happens after payment?</strong><br>
+                • If payment succeeds: Stripe webhook updates order status to <code>Processing</code><br>
+                • If payment fails: Stripe webhook updates order status to <code>Cancelled</code><br>
+                • Check your order in the Orders tab to see the updated status!
+            </div>
+        </div>
+
         <!-- ORDERS TAB -->
         <div id="orders" class="tab-content">
             <h2>📦 Orders</h2>
 
-            <!-- Payment Method Selection -->
-            <div class="form-group">
-                <label>Payment Method</label>
-                <select id="paymentMethod">
-                    <option value="1">Online Payment (Stripe)</option>
-                    <option value="2">Cash on Delivery</option>
-                </select>
-            </div>
             <!-- Get Delivery Methods -->
             <div class="endpoint-section">
                 <div class="endpoint-header">
@@ -604,9 +762,20 @@
                     <span class="method-badge method-post">POST</span>
                 </div>
                 <div class="endpoint-body">
-                    <div class="info-box">
-                        ℹ️ Make sure to complete payment first before creating order!
+                    <div class="warning-box">
+                        <strong>⚠️ IMPORTANT:</strong><br>
+                        • For <strong>Online Payment</strong>: Create payment intent first, then create order here, then complete payment in Payment tab<br>
+                        • For <strong>Cash on Delivery</strong>: Just create the order directly (no payment needed)
                     </div>
+                    
+                    <div class="form-group">
+                        <label>Payment Method</label>
+                        <select id="paymentMethod">
+                            <option value="1">1 - Online Payment (Stripe)</option>
+                            <option value="2">2 - Cash on Delivery</option>
+                        </select>
+                    </div>
+                    
                     <div class="form-group">
                         <label>Delivery Method ID</label>
                         <input type="number" id="orderDeliveryMethodId" value="1">
@@ -665,52 +834,6 @@
                     </div>
                     <button class="btn btn-primary" onclick="getOrderById()">Get Order</button>
                     <div id="orderByIdResponse" class="response-box" style="display:none;"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PAYMENT TAB -->
-        <div id="payment" class="tab-content">
-            <h2>💳 Payment</h2>
-
-            <!-- Create Payment Intent -->
-            <div class="endpoint-section">
-                <div class="endpoint-header">
-                    <span>Create Payment Intent</span>
-                    <span class="method-badge method-post">POST</span>
-                </div>
-                <div class="endpoint-body">
-                    <div class="info-box">
-                        ℹ️ This creates a payment intent for your current cart. Make sure you have items in cart first!
-                    </div>
-                    <button class="btn btn-primary" onclick="createPaymentIntent()">Create Payment Intent</button>
-                    <div id="paymentIntentResponse" class="response-box" style="display:none;"></div>
-                </div>
-            </div>
-
-            <!-- Complete Payment -->
-            <div class="endpoint-section">
-                <div class="endpoint-header">
-                    <span>Complete Payment with Stripe</span>
-                    <span class="method-badge method-post">POST</span>
-                </div>
-                <div class="endpoint-body">
-                    <div class="info-box">
-                        ℹ️ <strong>Test Cards:</strong><br>
-                        Success: 4242 4242 4242 4242<br>
-                        Decline: 4000 0000 0000 0002<br>
-                        Use any future expiry (e.g., 12/25) and any CVC (e.g., 123)
-                    </div>
-                    <div class="form-group">
-                        <label>Client Secret (from payment intent above)</label>
-                        <input type="text" id="clientSecret" placeholder="pi_xxx_secret_yyy">
-                    </div>
-                    <div class="form-group">
-                        <label>Card Details</label>
-                        <div id="card-element" class="card-element-container"></div>
-                    </div>
-                    <button class="btn btn-primary" onclick="completePayment()">Complete Payment</button>
-                    <div id="paymentResponse" class="response-box" style="display:none;"></div>
                 </div>
             </div>
         </div>
@@ -796,6 +919,7 @@
                         <select id="adminOrdersStatus">
                             <option value="">All Statuses</option>
                             <option value="Pending">Pending</option>
+                            <option value="PendingPayment">PendingPayment</option>
                             <option value="Processing">Processing</option>
                             <option value="Shipped">Shipped</option>
                             <option value="Delivered">Delivered</option>
@@ -823,6 +947,7 @@
                             <label>New Status</label>
                             <select id="adminNewOrderStatus">
                                 <option value="Pending">Pending</option>
+                                <option value="PendingPayment">PendingPayment</option>
                                 <option value="Processing">Processing</option>
                                 <option value="Shipped">Shipped</option>
                                 <option value="Delivered">Delivered</option>
@@ -1246,35 +1371,42 @@
             }
         }
 
-async function createOrder() {
-    const data = {
-        deliveryMethodId: parseInt(document.getElementById('orderDeliveryMethodId').value),
-        paymentMethod: parseInt(document.getElementById('paymentMethod').value), // NEW!
-        shippingAddress: {
-            fName: document.getElementById('orderFName').value,
-            lName: document.getElementById('orderLName').value,
-            city: document.getElementById('orderCity').value,
-            street: document.getElementById('orderStreet').value,
-            country: document.getElementById('orderCountry').value
-        }
-    };
+        async function createOrder() {
+            const paymentMethod = parseInt(document.getElementById('paymentMethod').value);
+            
+            const data = {
+                deliveryMethodId: parseInt(document.getElementById('orderDeliveryMethodId').value),
+                paymentMethod: paymentMethod,
+                shippingAddress: {
+                    fName: document.getElementById('orderFName').value,
+                    lName: document.getElementById('orderLName').value,
+                    city: document.getElementById('orderCity').value,
+                    street: document.getElementById('orderStreet').value,
+                    country: document.getElementById('orderCountry').value
+                }
+            };
 
-    try {
-        const response = await fetch(`${getBaseUrl()}/api/order`, {
-            method: 'POST',
-            headers: getHeaders(true),
-            body: JSON.stringify(data)
-        });
-        const result = await response.json();
-        displayResponse('createOrderResponse', result, response.status);
-        
-        if (response.ok) {
-            alert('✅ Order created successfully! Your cart has been cleared.');
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/order`, {
+                    method: 'POST',
+                    headers: getHeaders(true),
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                displayResponse('createOrderResponse', result, response.status);
+                
+                if (response.ok) {
+                    if (paymentMethod === 1) {
+                        alert('✅ Order created with status: PendingPayment! Now complete the payment in the Payment tab.');
+                    } else {
+                        alert('✅ Order created successfully with Cash on Delivery!');
+                    }
+                }
+            } catch (error) {
+                displayResponse('createOrderResponse', { error: error.message }, 0);
+            }
         }
-    } catch (error) {
-        displayResponse('createOrderResponse', { error: error.message }, 0);
-    }
-}
+
         async function getMyOrders() {
             try {
                 const response = await fetch(`${getBaseUrl()}/api/order/my-orders`, {
@@ -1316,7 +1448,7 @@ async function createOrder() {
                 
                 if (result.clientSecret) {
                     document.getElementById('clientSecret').value = result.clientSecret;
-                    alert('✅ Payment intent created! Client secret has been auto-filled below. You can now complete the payment.');
+                    alert('✅ Payment intent created! Now go to Orders tab and create your order. After that, return here to complete payment.');
                 }
             } catch (error) {
                 displayResponse('paymentIntentResponse', { error: error.message }, 0);
@@ -1336,8 +1468,30 @@ async function createOrder() {
                 return;
             }
 
+            // ✅ Extract PaymentIntent ID from client secret
+            const paymentIntentId = clientSecret.split('_secret_')[0];
+
             try {
-                displayResponse('paymentResponse', { status: 'Processing payment...' }, null);
+                // ✅ Validate order exists before payment
+                displayResponse('paymentResponse', { status: 'Validating order...' }, null);
+                
+                const validateResponse = await fetch(`${getBaseUrl()}/api/order/validate-payment/${paymentIntentId}`, {
+                    method: 'GET',
+                    headers: getHeaders(true)
+                });
+
+                if (!validateResponse.ok) {
+                    const error = await validateResponse.json();
+                    displayResponse('paymentResponse', { 
+                        error: 'Order not found! You must create the order first before completing payment.',
+                        details: error
+                    }, validateResponse.status);
+                    alert('❌ No order found for this payment intent!\n\nPlease go to the Orders tab and create your order first.');
+                    return;
+                }
+
+                // Order exists, proceed with payment
+                displayResponse('paymentResponse', { status: 'Order validated. Processing payment...' }, null);
                 
                 const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
                     payment_method: {
@@ -1352,8 +1506,10 @@ async function createOrder() {
                     displayResponse('paymentResponse', { 
                         error: error.message,
                         type: error.type,
-                        code: error.code
+                        code: error.code,
+                        note: 'The webhook will update your order status to Cancelled'
                     }, 400);
+                    alert('❌ Payment failed! Your order status will be updated to Cancelled by webhook.');
                 } else {
                     displayResponse('paymentResponse', {
                         success: true,
@@ -1363,9 +1519,10 @@ async function createOrder() {
                             status: paymentIntent.status,
                             amount: paymentIntent.amount / 100,
                             currency: paymentIntent.currency
-                        }
+                        },
+                        note: 'The webhook will update your order status to Processing'
                     }, 200);
-                    alert('✅ Payment successful! You can now create your order.');
+                    alert('✅ Payment successful! Your order status will be updated to Processing by webhook. Check your orders!');
                 }
             } catch (error) {
                 displayResponse('paymentResponse', { error: error.message }, 0);
