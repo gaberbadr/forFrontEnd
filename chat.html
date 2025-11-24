@@ -1,0 +1,1903 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Enhanced Chat Client</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+/* =========================================
+   1. CSS VARIABLES & RESET
+   ========================================= */
+:root {
+  /* Colors */
+  --primary: #6366f1;       /* Indigo */
+  --primary-hover: #4f46e5;
+  --secondary: #64748b;     /* Slate */
+  --success: #22c55e;       /* Green */
+  --danger: #ef4444;        /* Red */
+  --warning: #f59e0b;       /* Amber */
+  --bg-app: #f1f5f9;        /* Light Grey Background */
+  --bg-white: #ffffff;
+  --bg-chat: #eef2ff;       /* Very light indigo tint for chat area */
+  
+  /* Text Colors */
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --text-light: #f8fafc;
+
+  /* Borders & Shadows */
+  --border-color: #e2e8f0;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --radius: 12px;
+  --radius-sm: 6px;
+
+  /* Dimensions */
+  --header-height: 60px;
+  --sidebar-width: 320px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  height: 100vh;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* =========================================
+   2. LAYOUT STRUCTURE
+   ========================================= */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-header {
+  height: var(--header-height);
+  background: var(--bg-white);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  box-shadow: var(--shadow-sm);
+  z-index: 10;
+}
+
+.app-header h2 {
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.main-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden; /* Prevents double scrollbars */
+}
+
+/* =========================================
+   3. SIDEBAR
+   ========================================= */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-white);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sidebar-header {
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.search-box {
+  padding: 10px 15px;
+  display: flex;
+  gap: 5px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-app);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-box input:focus {
+  border-color: var(--primary);
+}
+
+.unread-summary {
+  padding: 5px 15px;
+  font-size: 0.8rem;
+  color: var(--primary);
+  font-weight: 600;
+  background: #e0e7ff;
+  text-align: center;
+}
+
+.conversations-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Conversation Item */
+.conversation-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-bottom: 1px solid transparent;
+}
+
+.conversation-item:hover {
+  background: #f8fafc;
+}
+
+.conversation-item.unread {
+  background: #f1f5f9;
+}
+
+.conversation-item.active {
+  background: #e0e7ff; /* Highlight selected */
+}
+
+.conv-avatar-wrapper {
+  position: relative;
+  margin-right: 12px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background-color: #cbd5e1;
+  border: 1px solid var(--border-color);
+}
+
+.avatar.avatar-sm {
+  width: 32px;
+  height: 32px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-white);
+  position: absolute;
+  bottom: 0;
+  right: 0;
+}
+
+.status-dot.online { background-color: var(--success); }
+.status-dot.offline { background-color: #cbd5e1; }
+.status-dot.connecting { background-color: var(--warning); }
+.status-dot.connected { background-color: var(--success); }
+
+.conv-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.conv-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.conv-name {
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conv-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.conv-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.conv-preview {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.unread-badge {
+  background: var(--primary);
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* User Search Section in Sidebar */
+.user-search-section {
+  border-top: 1px solid var(--border-color);
+  padding: 10px;
+  background: #f8fafc;
+  max-height: 30%;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-results {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 5px;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  background: white;
+  border-radius: var(--radius-sm);
+  margin-bottom: 5px;
+  border: 1px solid var(--border-color);
+}
+
+.search-result-info {
+  flex: 1;
+  margin: 0 10px;
+  overflow: hidden;
+}
+
+.search-result-name { font-weight: 600; font-size: 0.9rem; }
+.search-result-email { font-size: 0.75rem; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; }
+
+/* =========================================
+   4. CHAT AREA
+   ========================================= */
+.chat-area {
+  flex: 1;
+  background-color: var(--bg-chat);
+  background-image: radial-gradient(#e0e7ff 1px, transparent 1px);
+  background-size: 20px 20px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Welcome Screen */
+.welcome-screen {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.welcome-content h2 {
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+
+/* Chat Container */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chat-header {
+  background: var(--bg-white);
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-details h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.user-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Messages Area */
+.messages-container {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+
+.loading, .error-state, .empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  margin-top: 20px;
+  font-style: italic;
+}
+
+/* Individual Message */
+.message {
+  display: flex;
+  flex-direction: column;
+  max-width: 70%;
+  position: relative;
+}
+
+.message-sent {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.message-received {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.message-bubble {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  position: relative;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+  word-wrap: break-word;
+}
+
+.message-sent .message-bubble {
+  background-color: var(--primary);
+  color: white;
+  border-bottom-right-radius: 2px;
+}
+
+.message-received .message-bubble {
+  background-color: white;
+  color: var(--text-main);
+  border-bottom-left-radius: 2px;
+}
+
+/* Media in messages */
+.message-media img,
+.message-media video {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.message-document {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0,0,0,0.1);
+  padding: 8px;
+  border-radius: 6px;
+  margin-bottom: 5px;
+}
+
+.doc-link {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 500;
+}
+.doc-link:hover { text-decoration: underline; }
+
+/* Message Metadata */
+.message-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.read-status {
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+.read-status.sent { color: rgba(255,255,255, 0.7); }
+.read-status.read { color: #86efac; } /* Light green */
+
+/* New Msg Indicator */
+.new-msg-indicator {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--primary);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  z-index: 5;
+  display: none;
+}
+
+/* Typing Indicator */
+.typing-indicator {
+  padding: 5px 20px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* =========================================
+   5. COMPOSER
+   ========================================= */
+.message-composer {
+  background: var(--bg-white);
+  padding: 10px 20px;
+  border-top: 1px solid var(--border-color);
+  position: relative;
+}
+
+.attachment-preview {
+  background: #f1f5f9;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--primary);
+}
+
+.preview-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.btn-clear {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.composer-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.composer-input input {
+  flex: 1;
+  padding: 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-app);
+  outline: none;
+}
+
+.composer-input input:focus {
+  border-color: var(--primary);
+  background: white;
+}
+
+/* Buttons */
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn:hover { opacity: 0.9; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-sm { padding: 4px 10px; font-size: 0.8rem; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-success { background: var(--success); color: white; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-warning { background: var(--warning); color: white; }
+
+.btn-icon {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: var(--secondary);
+  padding: 5px;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+
+.btn-icon:hover { background: #f1f5f9; color: var(--primary); }
+
+.upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.btn-send {
+  border-radius: 20px;
+  padding: 8px 20px;
+}
+
+/* =========================================
+   6. CONFIG PANEL (MODAL)
+   ========================================= */
+.config-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  display: none;
+}
+
+.config-content {
+  background: white;
+  width: 90%;
+  max-width: 400px;
+  margin: 100px auto;
+  padding: 25px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.config-content h3 {
+  margin-bottom: 20px;
+  color: var(--text-main);
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+}
+
+.config-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+
+/* =========================================
+   7. TOAST NOTIFICATIONS
+   ========================================= */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.toast {
+  padding: 12px 20px;
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+  box-shadow: var(--shadow-md);
+  transform: translateX(120%);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  max-width: 300px;
+}
+
+.toast.show { transform: translateX(0); }
+.toast-info { background: var(--secondary); }
+.toast-success { background: var(--success); }
+.toast-error { background: var(--danger); }
+.toast-warning { background: var(--warning); }
+
+/* =========================================
+   8. RESPONSIVE DESIGN
+   ========================================= */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    position: absolute;
+    z-index: 20;
+    height: calc(100% - var(--header-height));
+    transform: translateX(0);
+    transition: transform 0.3s;
+  }
+  
+  /* When chat is open, hide sidebar on mobile */
+  .chat-container[style*="display: flex"] ~ .sidebar,
+  .chat-container[style*="display:flex"] ~ .sidebar {
+    /* Note: In pure CSS this sibling selector logic is tricky if the DOM order 
+       is Sidebar first. Usually you toggle a class on a parent wrapper. 
+       For this specific HTML structure, the sidebar is BEFORE the main area. 
+       Below makes the sidebar vanish if the chat area is visible via JS logic style attribute 
+    */
+  }
+  
+  /* Since JS handles display:none on chatContainer, we handle sidebar here: */
+  /* If chat container is hidden, Sidebar is full width */
+  .chat-container[style*="display: none"] {
+     display: none !important; 
+  }
+  
+  /* If chat is visible, we need to hide the sidebar behind it or via JS. 
+     Given the provided HTML/JS, let's make the sidebar collapse visually if chat is open */
+  .app-container.chat-active .sidebar {
+    display: none;
+  }
+  
+  .message { max-width: 85%; }
+}
+
+/* Update .config-content to allow absolute positioning inside it */
+.config-content {
+  position: relative; /* Add this line */
+  background: white;
+  width: 90%;
+  max-width: 400px;
+  margin: 100px auto;
+  padding: 25px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  animation: slideDown 0.3s ease;
+}
+
+/* Add style for the new close button */
+.close-modal-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #64748b; /* var(--secondary) */
+  cursor: pointer;
+  line-height: 1;
+  padding: 5px;
+  transition: color 0.2s;
+}
+
+.close-modal-btn:hover {
+  color: #ef4444; /* var(--danger) */
+}
+</style>
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <h2>PetMat Chat</h2>
+      <div class="connection-status">
+        <span id="statusIndicator" class="status-dot offline"></span>
+        <span id="statusText">Disconnected</span>
+      </div>
+    </header>
+
+    <!-- Configuration Panel -->
+<div class="config-panel" id="configPanel">
+  <div class="config-content">
+    <button id="closeConfigBtn" class="close-modal-btn">×</button> 
+    
+    <h3>Connection Settings</h3>
+    
+    <div class="form-group">
+      <label>API Base URL:</label>
+      <input id="apiBase" value="https://localhost:7289" />
+    </div>
+
+    <div class="form-group">
+      <label>JWT Token:</label>
+      <textarea id="tokenInput" placeholder="Paste your JWT token here" rows="3"></textarea>
+    </div>
+        <div class="config-actions">
+          <button id="saveToken" class="btn btn-primary">Save Token</button>
+          <button id="connectBtn" class="btn btn-success">Connect</button>
+          <button id="disconnectBtn" class="btn btn-danger" disabled>Disconnect</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-layout">
+      <!-- Left Sidebar: Conversations -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h3>Conversations</h3>
+          <button id="toggleConfig" class="btn-icon" title="Settings">⚙️</button>
+        </div>
+
+        <div class="search-box">
+          <input id="convSearch" placeholder="🔍 Search conversations..." />
+        </div>
+
+        <div class="unread-summary" id="unreadSummary">
+          <span id="totalUnread">0</span> unread messages
+        </div>
+
+        <div id="conversations" class="conversations-list"></div>
+
+        <!-- User Search Section -->
+        <div class="user-search-section">
+          <h4>Start New Chat</h4>
+          <div class="search-box">
+            <input id="userSearchQuery" placeholder="🔍 Search users..." />
+            <button id="userSearchBtn" class="btn btn-sm">Search</button>
+          </div>
+          <div id="searchResults" class="search-results"></div>
+        </div>
+      </aside>
+
+      <!-- Main Chat Area -->
+      <main class="chat-area">
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-content">
+            <h2>Welcome to PetMat Chat</h2>
+            <p>Select a conversation to start messaging</p>
+          </div>
+        </div>
+
+        <div class="chat-container" id="chatContainer" style="display:none;">
+          <!-- Chat Header -->
+          <div class="chat-header">
+            <div class="user-info">
+              <img id="selAvatar" class="avatar" src="" alt="" />
+              <div class="user-details">
+                <h3 id="selName">User Name</h3>
+                <div class="user-status">
+                  <span id="onlineIndicator" class="status-dot"></span>
+                  <span id="selStatus">Loading...</span>
+                </div>
+              </div>
+            </div>
+            <div class="chat-actions">
+              <button id="blockBtn" class="btn btn-warning btn-sm">🚫 Block</button>
+              <button id="unblockBtn" class="btn btn-success btn-sm">✅ Unblock</button>
+            </div>
+          </div>
+
+          <!-- Messages Area -->
+          <div id="messagesContainer" class="messages-container">
+            <div id="messages" class="messages-list"></div>
+            <button id="newMsgBtn" class="new-msg-indicator">↓ New messages</button>
+          </div>
+
+          <!-- Typing Indicator -->
+          <div id="typingIndicator" class="typing-indicator" style="display:none;">
+            <span class="typing-dots">
+              <span>.</span><span>.</span><span>.</span>
+            </span>
+            <span id="typingUser">Someone</span> is typing...
+          </div>
+
+          <!-- Message Composer -->
+          <div class="message-composer">
+            <div class="attachment-preview" id="attachmentPreview" style="display:none;">
+              <div class="preview-content">
+                <span id="previewText">File selected</span>
+                <button id="clearAttachment" class="btn-clear">×</button>
+              </div>
+            </div>
+
+            <div class="composer-input">
+              <button class="btn-icon" id="emojiBtn" title="Emoji">😊</button>
+              
+              <input id="messageInput" type="text" placeholder="Type a message..." />
+              
+              <label class="btn-icon upload-btn" title="Upload Image">
+                📷
+                <input id="imgPicker" accept="image/*" type="file" style="display:none" />
+              </label>
+              
+              <label class="btn-icon upload-btn" title="Upload Video">
+                🎥
+                <input id="videoPicker" accept="video/*" type="file" style="display:none" />
+              </label>
+              
+              <label class="btn-icon upload-btn" title="Upload Document">
+                📎
+                <input id="docPicker" accept=".pdf,.docx,.xlsx,.pptx,.txt,.rtf" type="file" style="display:none" />
+              </label>
+              
+              <button id="sendBtn" class="btn btn-primary btn-send">Send</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@7.0.5/dist/browser/signalr.min.js"></script>
+  <script>
+    // ============================================
+    // STATE MANAGEMENT
+    // ============================================
+    const AppState = {
+      token: localStorage.getItem('chat_token') || '',
+      apiBase: 'https://localhost:7289',
+      connection: null,
+      currentUserId: null,
+      selectedUser: null,
+      conversations: [],
+      onlineUsers: new Set(),
+      messageCache: new Map(),
+      pendingAttachment: null,
+      userAtBottom: true
+    };
+
+    // ============================================
+    // DOM ELEMENTS
+    // ============================================
+    const DOM = {
+      // Config
+      configPanel: document.getElementById('configPanel'),
+      closeConfigBtn: document.getElementById('closeConfigBtn'),
+      toggleConfig: document.getElementById('toggleConfig'),
+      apiBase: document.getElementById('apiBase'),
+      tokenInput: document.getElementById('tokenInput'),
+      saveToken: document.getElementById('saveToken'),
+      connectBtn: document.getElementById('connectBtn'),
+      disconnectBtn: document.getElementById('disconnectBtn'),
+      statusIndicator: document.getElementById('statusIndicator'),
+      statusText: document.getElementById('statusText'),
+      
+      // Conversations
+      conversations: document.getElementById('conversations'),
+      convSearch: document.getElementById('convSearch'),
+      unreadSummary: document.getElementById('unreadSummary'),
+      totalUnread: document.getElementById('totalUnread'),
+      
+      // User Search
+      userSearchQuery: document.getElementById('userSearchQuery'),
+      userSearchBtn: document.getElementById('userSearchBtn'),
+      searchResults: document.getElementById('searchResults'),
+      
+      // Chat
+      welcomeScreen: document.getElementById('welcomeScreen'),
+      chatContainer: document.getElementById('chatContainer'),
+      selAvatar: document.getElementById('selAvatar'),
+      selName: document.getElementById('selName'),
+      selStatus: document.getElementById('selStatus'),
+      onlineIndicator: document.getElementById('onlineIndicator'),
+      blockBtn: document.getElementById('blockBtn'),
+      unblockBtn: document.getElementById('unblockBtn'),
+      
+      // Messages
+      messagesContainer: document.getElementById('messagesContainer'),
+      messages: document.getElementById('messages'),
+      newMsgBtn: document.getElementById('newMsgBtn'),
+      typingIndicator: document.getElementById('typingIndicator'),
+      
+      // Composer
+      messageInput: document.getElementById('messageInput'),
+      sendBtn: document.getElementById('sendBtn'),
+      attachmentPreview: document.getElementById('attachmentPreview'),
+      previewText: document.getElementById('previewText'),
+      clearAttachment: document.getElementById('clearAttachment'),
+      imgPicker: document.getElementById('imgPicker'),
+      videoPicker: document.getElementById('videoPicker'),
+      docPicker: document.getElementById('docPicker'),
+      
+      // Toast
+      toastContainer: document.getElementById('toastContainer')
+    };
+
+    // ============================================
+    // UTILITIES
+    // ============================================
+    const Utils = {
+      escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      },
+      
+      formatDate(date) {
+        const d = new Date(date);
+        const now = new Date();
+        const diff = now - d;
+        
+        if (diff < 60000) return 'Just now';
+        if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+        if (diff < 86400000) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (diff < 604800000) return d.toLocaleDateString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+        return d.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      },
+      
+      formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(1) + ' MB';
+      },
+      
+      decodeToken(token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          return payload['uid'] || payload['nameid'] || payload['sub'] || null;
+        } catch {
+          return null;
+        }
+      },
+      
+      showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        DOM.toastContainer.appendChild(toast);
+        
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => {
+          toast.classList.remove('show');
+          setTimeout(() => toast.remove(), 300);
+        }, 3000);
+      },
+      
+      debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+    };
+
+    // ============================================
+    // TOKEN & CONNECTION MANAGEMENT
+    // ============================================
+    function initializeToken() {
+      DOM.tokenInput.value = AppState.token;
+      DOM.apiBase.value = AppState.apiBase;
+      if (AppState.token) {
+        AppState.currentUserId = Utils.decodeToken(AppState.token);
+      }
+    }
+
+    DOM.saveToken.addEventListener('click', () => {
+      const token = DOM.tokenInput.value.trim();
+      if (!token) {
+        Utils.showToast('Please enter a valid JWT token', 'error');
+        return;
+      }
+      AppState.token = token;
+      AppState.apiBase = DOM.apiBase.value.replace(/\/$/, '');
+      localStorage.setItem('chat_token', token);
+      AppState.currentUserId = Utils.decodeToken(token);
+      Utils.showToast('Token saved successfully', 'success');
+    });
+
+    DOM.toggleConfig.addEventListener('click', () => {
+      DOM.configPanel.style.display = DOM.configPanel.style.display === 'none' ? 'block' : 'none';
+    });
+    DOM.closeConfigBtn.addEventListener('click', () => {
+  DOM.configPanel.style.display = 'none';
+});
+
+    // ============================================
+    // SIGNALR CONNECTION
+    // ============================================
+    async function connectToHub() {
+      if (AppState.connection) {
+        Utils.showToast('Already connected', 'info');
+        return;
+      }
+
+      if (!AppState.token) {
+        Utils.showToast('Please save your token first', 'error');
+        return;
+      }
+
+      updateConnectionStatus('connecting');
+
+      AppState.connection = new signalR.HubConnectionBuilder()
+        .withUrl(`${AppState.apiBase}/chatHub`, {
+          accessTokenFactory: () => AppState.token
+        })
+        .withAutomaticReconnect({
+          nextRetryDelayInMilliseconds: () => 5000
+        })
+        .configureLogging(signalR.LogLevel.Warning)
+        .build();
+
+      setupSignalRHandlers();
+
+      try {
+        await AppState.connection.start();
+        updateConnectionStatus('connected');
+        Utils.showToast('Connected successfully', 'success');
+        DOM.connectBtn.disabled = true;
+        DOM.disconnectBtn.disabled = false;
+        await loadConversations();
+      } catch (err) {
+        console.error('Connection failed:', err);
+        updateConnectionStatus('disconnected');
+        Utils.showToast('Connection failed: ' + err.message, 'error');
+        AppState.connection = null;
+      }
+    }
+
+    function setupSignalRHandlers() {
+      const conn = AppState.connection;
+
+      // Load conversations on connect
+      conn.on('LoadConversations', handleConversationsUpdate);
+      conn.on('ConversationsUpdated', handleConversationsUpdate);
+
+      // Receive messages
+      conn.on('ReceivePrivateMessage', handleIncomingMessage);
+
+      // Online status updates
+      conn.on('UserOnlineStatus', handleOnlineStatus);
+      conn.on('UserOnlineStatusResponse', handleOnlineStatus);
+
+      // Message read receipts
+      conn.on('MessageRead', handleMessageRead);
+      conn.on('ConversationRead', handleConversationRead);
+
+      // Unread counts
+      conn.on('UnreadMessagesCount', (count) => {
+        DOM.totalUnread.textContent = count;
+      });
+
+      // Reconnection handling
+      conn.onreconnecting(() => {
+        updateConnectionStatus('connecting');
+        Utils.showToast('Reconnecting...', 'info');
+      });
+
+      conn.onreconnected(() => {
+        updateConnectionStatus('connected');
+        Utils.showToast('Reconnected', 'success');
+        loadConversations();
+      });
+
+      conn.onclose(() => {
+        updateConnectionStatus('disconnected');
+        Utils.showToast('Connection closed', 'error');
+        DOM.connectBtn.disabled = false;
+        DOM.disconnectBtn.disabled = true;
+      });
+    }
+
+    function updateConnectionStatus(status) {
+      DOM.statusIndicator.className = `status-dot ${status}`;
+      DOM.statusText.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+    }
+
+    DOM.connectBtn.addEventListener('click', connectToHub);
+
+    DOM.disconnectBtn.addEventListener('click', async () => {
+      if (AppState.connection) {
+        await AppState.connection.stop();
+        AppState.connection = null;
+        updateConnectionStatus('disconnected');
+        Utils.showToast('Disconnected', 'info');
+      }
+    });
+
+    // ============================================
+    // CONVERSATIONS
+    // ============================================
+    async function loadConversations() {
+      if (!AppState.token) return;
+
+      try {
+        const res = await fetch(`${AppState.apiBase}/api/messaging/conversations`, {
+          headers: { 'Authorization': `Bearer ${AppState.token}` }
+        });
+
+        if (!res.ok) throw new Error(await res.text());
+
+        const json = await res.json();
+        handleConversationsUpdate(json);
+      } catch (err) {
+        console.error('Load conversations failed:', err);
+        Utils.showToast('Failed to load conversations', 'error');
+      }
+    }
+
+    function handleConversationsUpdate(payload) {
+      const convs = payload?.data ?? payload ?? [];
+      AppState.conversations = Array.isArray(convs) ? convs : (convs.data ?? []);
+      
+      // Update total unread
+      const totalUnread = AppState.conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+      DOM.totalUnread.textContent = totalUnread;
+      
+      renderConversations(AppState.conversations);
+
+      // Check online status for all users
+      if (AppState.connection) {
+        AppState.conversations.forEach(conv => {
+          const userId = extractUserId(conv);
+          if (userId) {
+            AppState.connection.invoke('CheckUserOnlineStatus', userId).catch(() => {});
+          }
+        });
+      }
+    }
+
+    function renderConversations(list) {
+      const searchTerm = DOM.convSearch.value.toLowerCase();
+      const filtered = searchTerm 
+        ? list.filter(c => {
+            const name = (c.userName || c.fullName || '').toLowerCase();
+            const lastMsg = (c.lastMessage?.content || '').toLowerCase();
+            return name.includes(searchTerm) || lastMsg.includes(searchTerm);
+          })
+        : list;
+
+      DOM.conversations.innerHTML = '';
+
+      if (filtered.length === 0) {
+        DOM.conversations.innerHTML = '<div class="empty-state">No conversations found</div>';
+        return;
+      }
+
+      filtered.forEach(conv => {
+        const userId = extractUserId(conv);
+        const name = conv.userName || conv.fullName || userId;
+        const avatar = conv.userProfilePicture || '';
+        const lastMsg = conv.lastMessage?.content || '';
+        const lastMsgTime = conv.lastMessage?.sentAt || conv.lastMessage?.createdAt;
+        const unread = conv.unreadCount || 0;
+        const isOnline = AppState.onlineUsers.has(userId);
+
+        const item = document.createElement('div');
+        item.className = 'conversation-item' + (unread > 0 ? ' unread' : '');
+        item.dataset.userid = userId;
+        
+        item.innerHTML = `
+          <div class="conv-avatar-wrapper">
+            <img class="avatar" src="${avatar || ''}" onerror="this.src=''" alt="${Utils.escapeHtml(name)}" />
+            <span class="status-dot ${isOnline ? 'online' : 'offline'}"></span>
+          </div>
+          <div class="conv-content">
+            <div class="conv-header">
+              <span class="conv-name">${Utils.escapeHtml(name)}</span>
+              ${lastMsgTime ? `<span class="conv-time">${Utils.formatDate(lastMsgTime)}</span>` : ''}
+            </div>
+            <div class="conv-footer">
+              <span class="conv-preview">${Utils.escapeHtml(lastMsg.substring(0, 50))}</span>
+              ${unread > 0 ? `<span class="unread-badge">${unread}</span>` : ''}
+            </div>
+          </div>
+        `;
+
+        item.addEventListener('click', () => openConversation({ userId, name, profilePicture: avatar }));
+        DOM.conversations.appendChild(item);
+      });
+    }
+
+    function extractUserId(conv) {
+      return conv.userId || conv.otherUserId || conv.id || null;
+    }
+
+    DOM.convSearch.addEventListener('input', Utils.debounce(() => {
+      renderConversations(AppState.conversations);
+    }, 300));
+
+    // ============================================
+    // OPEN CONVERSATION & LOAD MESSAGES
+    // ============================================
+    async function openConversation(userObj) {
+      AppState.selectedUser = userObj;
+      
+      // Update UI
+      DOM.welcomeScreen.style.display = 'none';
+      DOM.chatContainer.style.display = 'flex';
+      DOM.selAvatar.src = userObj.profilePicture || '';
+      DOM.selName.textContent = userObj.name || userObj.userId;
+      DOM.selStatus.textContent = 'Loading...';
+      DOM.messages.innerHTML = '<div class="loading">Loading messages...</div>';
+
+      try {
+        // Load messages
+        const res = await fetch(
+          `${AppState.apiBase}/api/messaging/conversation/${encodeURIComponent(userObj.userId)}?pageIndex=1&pageSize=100`,
+          { headers: { 'Authorization': `Bearer ${AppState.token}` } }
+        );
+
+        if (!res.ok) throw new Error(await res.text());
+
+        const json = await res.json();
+        const messages = json?.data ?? json ?? [];
+        
+        renderMessages(messages);
+
+        // Mark conversation as read via hub
+        if (AppState.connection) {
+          try {
+            await AppState.connection.invoke('MarkConversationAsRead', userObj.userId);
+          } catch (e) {
+            console.warn('Mark as read failed:', e);
+          }
+        }
+
+        // Check online status
+        if (AppState.connection) {
+          AppState.connection.invoke('CheckUserOnlineStatus', userObj.userId).catch(() => {});
+        }
+
+        // Show block/unblock buttons
+        DOM.blockBtn.style.display = 'inline-block';
+        DOM.unblockBtn.style.display = 'inline-block';
+
+      } catch (err) {
+        console.error('Open conversation failed:', err);
+        DOM.messages.innerHTML = '<div class="error-state">Failed to load messages</div>';
+        Utils.showToast('Failed to load conversation', 'error');
+      }
+    }
+
+    // ============================================
+    // MESSAGE RENDERING
+    // ============================================
+    function renderMessages(messages) {
+      DOM.messages.innerHTML = '';
+      
+      if (!messages || messages.length === 0) {
+        DOM.messages.innerHTML = '<div class="empty-state">No messages yet. Start the conversation!</div>';
+        scrollToBottom(false);
+        return;
+      }
+
+      AppState.messageCache.clear();
+      
+      messages.forEach(msg => {
+        const messageId = msg.id || msg.messageId;
+        if (messageId) {
+          AppState.messageCache.set(messageId, msg);
+        }
+        addMessageToUI(msg);
+      });
+
+      scrollToBottom(false);
+      checkScrollPosition();
+    }
+
+    function addMessageToUI(msg, prepend = false) {
+      const senderId = msg.senderId || msg.sender?.userId || '';
+      const content = msg.content || '';
+      const mediaUrl = msg.mediaUrl || null;
+      const sentAt = msg.sentAt || msg.createdAt || new Date();
+      const senderName = msg.senderName || msg.sender?.fullName || 'User';
+      const messageId = msg.id || msg.messageId;
+      const isRead = msg.isRead !== undefined ? msg.isRead : true;
+      const messageType = msg.type || 'Text';
+      
+      const isMine = senderId && AppState.currentUserId && 
+                     senderId.toString() === AppState.currentUserId.toString();
+
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${isMine ? 'message-sent' : 'message-received'}`;
+      msgDiv.dataset.messageid = messageId;
+
+      let contentHtml = '';
+
+      // Render media based on type
+      if (mediaUrl) {
+        if (messageType === 'Image') {
+          contentHtml += `
+            <div class="message-media">
+              <img src="${Utils.escapeHtml(mediaUrl)}" alt="Image" class="message-image" 
+                   onclick="window.open('${Utils.escapeHtml(mediaUrl)}', '_blank')" />
+            </div>
+          `;
+        } else if (messageType === 'Video') {
+          contentHtml += `
+            <div class="message-media">
+              <video controls class="message-video">
+                <source src="${Utils.escapeHtml(mediaUrl)}" type="video/mp4">
+                Your browser doesn't support video.
+              </video>
+            </div>
+          `;
+        } else if (messageType === 'Document') {
+          const fileName = mediaUrl.split('/').pop();
+          contentHtml += `
+            <div class="message-document">
+              <span class="doc-icon">📄</span>
+              <a href="${Utils.escapeHtml(mediaUrl)}" target="_blank" class="doc-link">
+                ${Utils.escapeHtml(fileName)}
+              </a>
+            </div>
+          `;
+        } else {
+          contentHtml += `
+            <div class="message-attachment">
+              <a href="${Utils.escapeHtml(mediaUrl)}" target="_blank">📎 View Attachment</a>
+            </div>
+          `;
+        }
+      }
+
+      if (content) {
+        contentHtml += `<div class="message-text">${Utils.escapeHtml(content)}</div>`;
+      }
+
+      // Message metadata with read status
+      const readStatus = isMine ? getReadStatusIcon(isRead) : '';
+      
+      msgDiv.innerHTML = `
+        <div class="message-bubble">
+          ${contentHtml}
+          <div class="message-meta">
+            <span class="message-time">${Utils.formatDate(sentAt)}</span>
+            ${readStatus}
+          </div>
+        </div>
+      `;
+
+      if (prepend) {
+        DOM.messages.insertBefore(msgDiv, DOM.messages.firstChild);
+      } else {
+        DOM.messages.appendChild(msgDiv);
+      }
+
+      // Auto-scroll if user is at bottom
+      if (AppState.userAtBottom) {
+        scrollToBottom(true);
+      } else {
+        showNewMessageIndicator();
+      }
+
+      // Mark as read if it's from another user and not read yet
+      if (!isMine && !isRead && messageId && AppState.connection) {
+        markMessageAsRead(messageId);
+      }
+    }
+
+    function getReadStatusIcon(isRead) {
+      if (isRead) {
+        return '<span class="read-status read" title="Read">✓✓</span>';
+      } else {
+        return '<span class="read-status sent" title="Sent">✓</span>';
+      }
+    }
+
+    function handleIncomingMessage(message) {
+      const senderId = message.senderId || message.sender?.userId || '';
+      const receiverId = message.receiverId || message.receiver?.userId || '';
+      
+      // Determine the other user in this conversation
+      const otherUserId = (senderId === AppState.currentUserId) ? receiverId : senderId;
+
+      // If this message is for the currently open conversation
+      if (AppState.selectedUser && otherUserId === AppState.selectedUser.userId) {
+        addMessageToUI(message);
+        
+        // Mark as read if it's from the other user
+        const messageId = message.id || message.messageId;
+        const isMine = senderId === AppState.currentUserId;
+        
+        if (!isMine && messageId && AppState.connection) {
+          markMessageAsRead(messageId);
+        }
+      } else {
+        // Message is for a different conversation - show notification
+        Utils.showToast(`New message from ${message.senderName || 'someone'}`, 'info');
+        showNewMessageIndicator();
+      }
+
+      // Reload conversations to update preview and unread count
+      loadConversations();
+    }
+
+    // ============================================
+    // READ RECEIPTS
+    // ============================================
+    async function markMessageAsRead(messageId) {
+      if (!AppState.connection || !messageId) return;
+
+      try {
+        await AppState.connection.invoke('MarkMessageAsRead', parseInt(messageId));
+      } catch (err) {
+        console.warn('Mark as read failed:', err);
+      }
+    }
+
+    function handleMessageRead(payload) {
+      const messageId = payload.messageId || payload.MessageId;
+      
+      if (!messageId) return;
+
+      // Update the message UI to show it's been read (double checkmark)
+      const msgElement = document.querySelector(`[data-messageid="${messageId}"]`);
+      if (msgElement) {
+        const readStatus = msgElement.querySelector('.read-status');
+        if (readStatus) {
+          readStatus.className = 'read-status read';
+          readStatus.innerHTML = '✓✓';
+          readStatus.title = 'Read';
+        }
+      }
+
+      // Update cache
+      const cachedMsg = AppState.messageCache.get(messageId);
+      if (cachedMsg) {
+        cachedMsg.isRead = true;
+        AppState.messageCache.set(messageId, cachedMsg);
+      }
+
+      // Reload conversations
+      loadConversations();
+    }
+
+    function handleConversationRead(payload) {
+      // When the other user reads all messages in conversation
+      const readBy = payload.readBy || payload.ReadBy;
+      
+      if (!readBy) return;
+
+      // Update all sent messages to show as read
+      document.querySelectorAll('.message-sent .read-status').forEach(status => {
+        status.className = 'read-status read';
+        status.innerHTML = '✓✓';
+        status.title = 'Read';
+      });
+
+      // Update cache
+      AppState.messageCache.forEach((msg, id) => {
+        if (msg.senderId === AppState.currentUserId) {
+          msg.isRead = true;
+          AppState.messageCache.set(id, msg);
+        }
+      });
+
+      loadConversations();
+    }
+
+    // ============================================
+    // ONLINE STATUS
+    // ============================================
+    function handleOnlineStatus(payload) {
+      const userId = payload.userId || payload.UserId;
+      const isOnline = payload.isOnline || payload.IsOnline || false;
+      const lastSeen = payload.lastSeen || payload.LastSeen;
+
+      if (!userId) return;
+
+      // Update online users set
+      if (isOnline) {
+        AppState.onlineUsers.add(userId);
+      } else {
+        AppState.onlineUsers.delete(userId);
+      }
+
+      // Update conversation list indicator
+      updateConversationOnlineStatus(userId, isOnline);
+
+      // Update chat header if this is the selected user
+      if (AppState.selectedUser && AppState.selectedUser.userId === userId) {
+        DOM.onlineIndicator.className = `status-dot ${isOnline ? 'online' : 'offline'}`;
+        DOM.selStatus.textContent = isOnline ? 'Online' : (lastSeen ? `Last seen ${Utils.formatDate(lastSeen)}` : 'Offline');
+      }
+    }
+
+    function updateConversationOnlineStatus(userId, isOnline) {
+      const convItem = document.querySelector(`.conversation-item[data-userid="${userId}"]`);
+      if (convItem) {
+        const statusDot = convItem.querySelector('.status-dot');
+        if (statusDot) {
+          statusDot.className = `status-dot ${isOnline ? 'online' : 'offline'}`;
+        }
+      }
+    }
+
+    // ============================================
+    // SEND MESSAGES
+    // ============================================
+    async function sendTextMessage() {
+      const text = DOM.messageInput.value.trim();
+      
+      if (!text && !AppState.pendingAttachment) {
+        Utils.showToast('Please type a message or select a file', 'warning');
+        return;
+      }
+
+      if (!AppState.selectedUser) {
+        Utils.showToast('Please select a conversation first', 'warning');
+        return;
+      }
+
+      if (!AppState.connection) {
+        Utils.showToast('Not connected to chat server', 'error');
+        return;
+      }
+
+      // If there's an attachment, use HTTP upload
+      if (AppState.pendingAttachment) {
+        await sendMessageWithFile(text);
+        return;
+      }
+
+      // Send text-only message via SignalR
+      try {
+        DOM.sendBtn.disabled = true;
+        
+        await AppState.connection.invoke(
+          'SendPrivateMessage',
+          AppState.selectedUser.userId,
+          text,
+          'Text',
+          null,
+          null
+        );
+
+        DOM.messageInput.value = '';
+        DOM.sendBtn.disabled = false;
+      } catch (err) {
+        console.error('Send message failed:', err);
+        Utils.showToast('Failed to send message', 'error');
+        DOM.sendBtn.disabled = false;
+      }
+    }
+
+    async function sendMessageWithFile(text) {
+      const file = AppState.pendingAttachment;
+      const messageType = determineMessageType(file);
+
+      const formData = new FormData();
+      formData.append('ReceiverId', AppState.selectedUser.userId);
+      formData.append('Type', messageType);
+      formData.append('Content', text || '');
+      formData.append('MediaFile', file);
+
+      try {
+        DOM.sendBtn.disabled = true;
+
+        const res = await fetch(`${AppState.apiBase}/api/messaging/send`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${AppState.token}` },
+          body: formData
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(errorText || res.statusText);
+        }
+
+        // Server will broadcast via SignalR
+        DOM.messageInput.value = '';
+        clearAttachment();
+        DOM.sendBtn.disabled = false;
+        Utils.showToast('Message sent', 'success');
+      } catch (err) {
+        console.error('File upload failed:', err);
+        Utils.showToast('Failed to send file: ' + err.message, 'error');
+        DOM.sendBtn.disabled = false;
+      }
+    }
+
+    function determineMessageType(file) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      
+      if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+        return 'Image';
+      } else if (['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv'].includes(ext)) {
+        return 'Video';
+      } else if (['pdf', 'docx', 'xlsx', 'pptx', 'txt', 'rtf'].includes(ext)) {
+        return 'Document';
+      }
+      return 'Document';
+    }
+
+    DOM.sendBtn.addEventListener('click', sendTextMessage);
+    DOM.messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendTextMessage();
+      }
+    });
+
+    // ============================================
+    // FILE ATTACHMENTS
+    // ============================================
+    function handleFileSelection(file) {
+      if (!file) return;
+
+      // Validate file size (100MB limit)
+      if (file.size > 100 * 1024 * 1024) {
+        Utils.showToast('File size must be less than 100MB', 'error');
+        return;
+      }
+
+      AppState.pendingAttachment = file;
+      
+      // Show preview
+      DOM.attachmentPreview.style.display = 'block';
+      DOM.previewText.textContent = `${file.name} (${Utils.formatFileSize(file.size)})`;
+    }
+
+    function clearAttachment() {
+      AppState.pendingAttachment = null;
+      DOM.attachmentPreview.style.display = 'none';
+      DOM.previewText.textContent = '';
+      DOM.imgPicker.value = '';
+      DOM.videoPicker.value = '';
+      DOM.docPicker.value = '';
+    }
+
+    DOM.imgPicker.addEventListener('change', (e) => {
+      if (e.target.files[0]) handleFileSelection(e.target.files[0]);
+    });
+
+    DOM.videoPicker.addEventListener('change', (e) => {
+      if (e.target.files[0]) handleFileSelection(e.target.files[0]);
+    });
+
+    DOM.docPicker.addEventListener('change', (e) => {
+      if (e.target.files[0]) handleFileSelection(e.target.files[0]);
+    });
+
+    DOM.clearAttachment.addEventListener('click', clearAttachment);
+
+    // ============================================
+    // SCROLL MANAGEMENT
+    // ============================================
+    function scrollToBottom(smooth = true) {
+      DOM.messagesContainer.scrollTo({
+        top: DOM.messagesContainer.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      });
+      DOM.newMsgBtn.style.display = 'none';
+      AppState.userAtBottom = true;
+    }
+
+    function checkScrollPosition() {
+      const container = DOM.messagesContainer;
+      const threshold = 100;
+      const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+      
+      AppState.userAtBottom = distanceFromBottom <= threshold;
+      
+      if (AppState.userAtBottom) {
+        DOM.newMsgBtn.style.display = 'none';
+      }
+    }
+
+    function showNewMessageIndicator() {
+      if (!AppState.userAtBottom) {
+        DOM.newMsgBtn.style.display = 'block';
+      }
+    }
+
+    DOM.messagesContainer.addEventListener('scroll', Utils.debounce(checkScrollPosition, 100));
+    DOM.newMsgBtn.addEventListener('click', () => scrollToBottom(true));
+
+    // ============================================
+    // BLOCK/UNBLOCK
+    // ============================================
+    DOM.blockBtn.addEventListener('click', async () => {
+      if (!AppState.connection || !AppState.selectedUser) return;
+
+      try {
+        await AppState.connection.invoke('BlockUser', AppState.selectedUser.userId);
+        Utils.showToast('User blocked successfully', 'success');
+        loadConversations();
+      } catch (err) {
+        console.error('Block failed:', err);
+        Utils.showToast('Failed to block user', 'error');
+      }
+    });
+
+    DOM.unblockBtn.addEventListener('click', async () => {
+      if (!AppState.connection || !AppState.selectedUser) return;
+
+      try {
+        await AppState.connection.invoke('UnblockUser', AppState.selectedUser.userId);
+        Utils.showToast('User unblocked successfully', 'success');
+        loadConversations();
+      } catch (err) {
+        console.error('Unblock failed:', err);
+        Utils.showToast('Failed to unblock user', 'error');
+      }
+    });
+
+    // ============================================
+    // USER SEARCH
+    // ============================================
+    async function searchUsers() {
+      const query = DOM.userSearchQuery.value.trim();
+      
+      if (!query) {
+        Utils.showToast('Please enter a search term', 'warning');
+        return;
+      }
+
+      if (!AppState.token) {
+        Utils.showToast('Please connect first', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `${AppState.apiBase}/api/usersearch/search?query=${encodeURIComponent(query)}&pageIndex=1&pageSize=20`,
+          { headers: { 'Authorization': `Bearer ${AppState.token}` } }
+        );
+
+        if (!res.ok) throw new Error(await res.text());
+
+        const json = await res.json();
+        const users = json?.data ?? json ?? [];
+        
+        renderSearchResults(users);
+      } catch (err) {
+        console.error('User search failed:', err);
+        Utils.showToast('Search failed', 'error');
+      }
+    }
+
+    function renderSearchResults(users) {
+      DOM.searchResults.innerHTML = '';
+
+      if (!users || users.length === 0) {
+        DOM.searchResults.innerHTML = '<div class="empty-state">No users found</div>';
+        return;
+      }
+
+      users.forEach(user => {
+        const item = document.createElement('div');
+        item.className = 'search-result-item';
+        
+        item.innerHTML = `
+          <img class="avatar avatar-sm" src="${user.profilePicture || ''}" onerror="this.src=''" alt="${Utils.escapeHtml(user.fullName)}" />
+          <div class="search-result-info">
+            <div class="search-result-name">${Utils.escapeHtml(user.fullName || user.firstName + ' ' + user.lastName)}</div>
+            <div class="search-result-email">${Utils.escapeHtml(user.email)}</div>
+          </div>
+          <button class="btn btn-sm btn-primary">Chat</button>
+        `;
+
+        const chatBtn = item.querySelector('button');
+        chatBtn.addEventListener('click', () => {
+          openConversation({
+            userId: user.userId,
+            name: user.fullName || `${user.firstName} ${user.lastName}`,
+            profilePicture: user.profilePicture
+          });
+          DOM.userSearchQuery.value = '';
+          DOM.searchResults.innerHTML = '';
+        });
+
+        DOM.searchResults.appendChild(item);
+      });
+    }
+
+    DOM.userSearchBtn.addEventListener('click', searchUsers);
+    DOM.userSearchQuery.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchUsers();
+      }
+    });
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    initializeToken();
+
+    // Auto-connect if token exists
+    if (AppState.token) {
+      setTimeout(() => {
+        connectToHub();
+      }, 500);
+    }
+
+    // Hide config panel by default
+    DOM.configPanel.style.display = 'none';
+
+    console.log('Chat client initialized');
+  </script>
+</body>
+</html>
